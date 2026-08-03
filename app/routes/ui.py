@@ -15,9 +15,9 @@ DEFAULT_LAYOUT_ID = "line-a"
 DEFAULT_REFRESH_INTERVAL_SEC = 10
 
 
-@router.get("/", response_class=HTMLResponse)
-async def welcome(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "pages/welcome.html", {})
+@router.get("/")
+async def root() -> RedirectResponse:
+    return RedirectResponse(url="/ui/dashboard")
 
 
 @router.get("/ui/dashboard")

@@ -1,5 +1,4 @@
 {% set nav_items = [
-  {"href": "/", "icon": "⌂", "label": "ホーム"},
   {"href": "/ui/dashboard", "icon": "▦", "label": "ダッシュボード"},
   {"href": "/ui/layouts", "icon": "⬚", "label": "レイアウト編集"},
   {"href": "/ui/settings", "icon": "⚙", "label": "システム設定", "also": ["/ui/api-sources", "/ui/tag-mappings", "/ui/standalone"]},
@@ -22,7 +21,7 @@
       </div>
       <nav class="sidebar__nav" aria-label="画面ナビゲーション">
         {% for item in nav_items %}
-        {% set ns = namespace(active=(request.url.path == item.href or (item.href != "/" and request.url.path.startswith(item.href + "/")))) %}
+        {% set ns = namespace(active=(request.url.path == item.href or request.url.path.startswith(item.href + "/"))) %}
         {% for extra in item.also|default([]) %}
           {% if request.url.path == extra or request.url.path.startswith(extra + "/") %}{% set ns.active = true %}{% endif %}
         {% endfor %}
