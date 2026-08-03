@@ -20,8 +20,10 @@
   const metaWidth = document.getElementById("meta-width");
   const metaHeight = document.getElementById("meta-height");
   const addBtn = document.getElementById("add-item-btn");
+  const saveBtn = document.getElementById("save-btn");
   const downloadBtn = document.getElementById("download-btn");
   const statusEl = document.getElementById("editor-status");
+  const saveMessage = document.getElementById("save-message");
 
   const panelEmpty = document.getElementById("editor-panel-empty");
   const panelForm = document.getElementById("editor-panel-form");
@@ -197,12 +199,8 @@
     renderCanvasSize();
   });
 
-  downloadBtn.addEventListener("click", () => {
-    if (!state.id || !state.name) {
-      window.alert("ID と 名前 を入力してください。");
-      return;
-    }
-    const payload = {
+  function buildPayload() {
+    return {
       schemaVersion: "1.0",
       layout: { id: state.id, name: state.name, width: state.width, height: state.height },
       items: state.items.map((it) => ({
@@ -215,7 +213,14 @@
         tagId: it.tagId,
       })),
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  }
+
+  downloadBtn.addEventListener("click", () => {
+    if (!state.id || !state.name) {
+      window.alert("ID と 名前 を入力してください。");
+      return;
+    }
+    const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -224,6 +229,39 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    if (!state.id || !state.name) {
+      window.alert("ID と 名前 を入力してください。");
+      return;
+    }
+    saveBtn.disabled = true;
+    const originalLabel = saveBtn.textContent;
+    saveBtn.textContent = "保存中...";
+    saveMessage.className = "editor-save-message";
+    saveMessage.textContent = "";
+    try {
+      const res = await fetch("/api/layouts/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload()),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        saveMessage.textContent = `✓ サーバーに保存しました(${data.id})`;
+        saveMessage.classList.add("editor-save-message--ok");
+      } else {
+        saveMessage.textContent = `✕ 保存に失敗しました: ${(data.errors || []).join(" / ")}`;
+        saveMessage.classList.add("editor-save-message--error");
+      }
+    } catch (err) {
+      saveMessage.textContent = "✕ 通信エラーが発生しました。";
+      saveMessage.classList.add("editor-save-message--error");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalLabel;
+    }
   });
 
   renderCanvasSize();

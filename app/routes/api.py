@@ -1,9 +1,12 @@
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+import json
+
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from providers.json_status_provider import JsonStatusProvider
+from schemas.layout import LayoutDefinition
 from services.import_export_service import validate_layout_json, validate_status_json
-from services.layout_service import LayoutNotFoundError, get_layout
+from services.layout_service import LayoutNotFoundError, get_layout, save_layout
 
 router = APIRouter(tags=["api"])
 
@@ -29,6 +32,18 @@ async def export_status() -> JSONResponse:
         content=status.model_dump(by_alias=True, mode="json"),
         headers={"Content-Disposition": 'attachment; filename="status.json"'},
     )
+
+
+@router.post("/layouts/save")
+async def save_layout_endpoint(request: Request) -> JSONResponse:
+    raw = await request.body()
+    result = validate_layout_json(raw)
+    if not result.ok:
+        return JSONResponse(status_code=422, content={"ok": False, "errors": result.errors})
+
+    layout = LayoutDefinition.model_validate(json.loads(raw))
+    save_layout(layout)
+    return JSONResponse(content={"ok": True, "id": layout.layout.id, "name": layout.layout.name})
 
 
 @router.post("/standalone/layout/import")

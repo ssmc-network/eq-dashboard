@@ -17,6 +17,10 @@
       装置状態はサーバー上のサンプルJSON(layout.json / status.json)から取得しています。
       外部REST APIに接続するオンラインモードは、バックエンドとの接続実装後に対応予定です。
     </p>
+    <p class="import-confirm__notice">
+      Import・保存した内容はコンテナ内のファイルに直接書き込まれ、ブラウザをリロードしても消えません。
+      ただし永続化ボリュームは使用していないため、コンテナを再作成すると初期データに戻ります(将来のオンライン運用が本命のため)。
+    </p>
   </div>
 </div>
 
@@ -59,7 +63,7 @@
       <button type="submit" class="btn">status.jsonをダウンロード</button>
     </form>
 
-    <h3>Import(検証のみ)</h3>
+    <h3>Import</h3>
     <form class="standalone-form"
           hx-post="/ui/standalone/status/import"
           hx-target="#status-import-result"
