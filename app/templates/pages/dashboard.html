@@ -3,14 +3,30 @@
 {% block page_title %}ダッシュボード{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>ダッシュボード</h1>
-  <p>レイアウトに沿った設備の稼働状態を表示します。</p>
+  <h1>{{ layout.layout.name }}</h1>
+  <p>レイアウトに沿った設備の稼働状態を表示します(サンプルJSONデータ)。</p>
 </div>
-<div class="card">
-  <div class="placeholder">
-    <span class="badge">準備中</span>
-    <p>レイアウト表示とタグ状態の反映はフェーズ1で実装予定です。</p>
+
+<div class="dashboard-toolbar">
+  <label class="toolbar-field">
+    <span>自動更新</span>
+    <select id="refresh-mode">
+      <option value="off">なし</option>
+      <option value="on" selected>自動更新</option>
+    </select>
+  </label>
+  <label class="toolbar-field">
+    <span>間隔(秒)</span>
+    <input type="number" id="refresh-interval" min="1" step="1" value="{{ default_refresh_interval }}">
+  </label>
+  <span class="badge" id="refresh-status">{{ default_refresh_interval }}秒ごとに更新</span>
+</div>
+
+<div class="dashboard-canvas-wrap">
+  <div id="dashboard-items" data-refresh-url="/ui/dashboard/{{ layout.layout.id }}/items">
+    {% include "partials/dashboard_items.html" %}
   </div>
-  <div id="dashboard-items"></div>
 </div>
+
+<script src="/static/js/dashboard.js"></script>
 {% endblock %}

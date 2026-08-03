@@ -13,7 +13,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}EQ Dashboard{% endblock %}</title>
-  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script src="/static/js/htmx.min.js"></script>
   <link rel="stylesheet" href="/static/css/main.css">
 </head>
 <body>
@@ -26,7 +26,7 @@
       <nav class="sidebar__nav" aria-label="画面ナビゲーション">
         {% for item in nav_items %}
         <a class="sidebar__link" href="{{ item.href }}"
-           {% if request.url.path == item.href %}aria-current="page"{% endif %}>
+           {% if request.url.path == item.href or (item.href != "/" and request.url.path.startswith(item.href + "/")) %}aria-current="page"{% endif %}>
           <span class="sidebar__link-icon">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
         </a>
