@@ -40,4 +40,11 @@
   modeEl.addEventListener("change", apply);
   intervalEl.addEventListener("change", apply);
   apply();
+
+  const layoutSwitcher = document.getElementById("layout-switcher");
+  if (layoutSwitcher) {
+    layoutSwitcher.addEventListener("change", () => {
+      window.location.href = `/ui/dashboard/${layoutSwitcher.value}`;
+    });
+  }
 })();

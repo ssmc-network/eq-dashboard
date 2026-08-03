@@ -1,25 +1,46 @@
 import json
 from pathlib import Path
 
-from schemas.layout import LayoutDefinition
+from schemas.layout import LayoutDefinition, LayoutMeta
 from schemas.status import StatusSnapshot
 
-SAMPLE_DIR = Path(__file__).resolve().parent.parent / "data" / "sample"
+LAYOUTS_DIR = Path(__file__).resolve().parent.parent / "data" / "sample" / "layouts"
+
+
+class LayoutFileNotFoundError(Exception):
+    pass
 
 
 class JsonStatusProvider:
-    def __init__(
-        self,
-        layout_path: Path = SAMPLE_DIR / "layout.json",
-        status_path: Path = SAMPLE_DIR / "status.json",
-    ) -> None:
-        self._layout_path = layout_path
-        self._status_path = status_path
+    def __init__(self, layouts_dir: Path = LAYOUTS_DIR) -> None:
+        self._layouts_dir = layouts_dir
 
-    def load_layout(self) -> LayoutDefinition:
-        data = json.loads(self._layout_path.read_text(encoding="utf-8"))
+    def list_layouts(self) -> list[LayoutMeta]:
+        metas = []
+        for layout_dir in sorted(self._layouts_dir.iterdir()):
+            layout_file = layout_dir / "layout.json"
+            if not layout_file.exists():
+                continue
+            data = json.loads(layout_file.read_text(encoding="utf-8"))
+            metas.append(LayoutDefinition.model_validate(data).layout)
+        return metas
+
+    def load_layout(self, layout_id: str) -> LayoutDefinition:
+        data = json.loads(self._layout_path(layout_id).read_text(encoding="utf-8"))
         return LayoutDefinition.model_validate(data)
 
-    def load_status(self) -> StatusSnapshot:
-        data = json.loads(self._status_path.read_text(encoding="utf-8"))
+    def load_status(self, layout_id: str) -> StatusSnapshot:
+        data = json.loads(self._status_path(layout_id).read_text(encoding="utf-8"))
         return StatusSnapshot.model_validate(data)
+
+    def _layout_path(self, layout_id: str) -> Path:
+        path = self._layouts_dir / layout_id / "layout.json"
+        if not path.exists():
+            raise LayoutFileNotFoundError(layout_id)
+        return path
+
+    def _status_path(self, layout_id: str) -> Path:
+        path = self._layouts_dir / layout_id / "status.json"
+        if not path.exists():
+            raise LayoutFileNotFoundError(layout_id)
+        return path

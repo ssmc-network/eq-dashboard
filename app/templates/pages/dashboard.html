@@ -3,8 +3,18 @@
 {% block page_title %}ダッシュボード{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>{{ layout.layout.name }}</h1>
-  <p>簡易図面上の装置を稼働状態の色で表示します(サンプルJSONデータ)。</p>
+  <div>
+    <h1>{{ layout.layout.name }}</h1>
+    <p>簡易図面上の装置を稼働状態の色で表示します(サンプルJSONデータ)。</p>
+  </div>
+  <label class="toolbar-field">
+    <span>キャンバス</span>
+    <select id="layout-switcher">
+      {% for meta in available_layouts %}
+      <option value="{{ meta.id }}" {% if meta.id == layout.layout.id %}selected{% endif %}>{{ meta.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
 </div>
 
 <div class="dashboard-toolbar">

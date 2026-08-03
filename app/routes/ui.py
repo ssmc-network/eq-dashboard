@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from schemas.layout import LayoutDefinition
-from services.status_service import DashboardBox, LayoutNotFoundError, get_dashboard
+from services.status_service import DashboardBox, LayoutNotFoundError, get_dashboard, list_layouts
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
@@ -31,6 +31,7 @@ async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
         {
             "layout": layout,
             "boxes": boxes,
+            "available_layouts": list_layouts(),
             "default_refresh_interval": DEFAULT_REFRESH_INTERVAL_SEC,
         },
     )
