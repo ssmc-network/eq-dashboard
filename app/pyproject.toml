@@ -1,0 +1,50 @@
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+fastapi = {extras = ["standard"], version = "^0.115.12"}
+pydantic-settings = "^2.0.3"
+httpx = "^0.28.1"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.14.1"
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+ruff = "^0.11.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+show_error_context = true
+show_column_numbers = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_redundant_casts = true
+disable_error_code = "misc"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 119
+
+[tool.ruff.lint]
+select = ["B", "D", "E", "F", "I", "N", "W", "C90", "PL", "RUF", "UP"]
+ignore = ["D104", "D210", "D415"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
+[tool.ruff.lint.pylint]
+max-args = 20

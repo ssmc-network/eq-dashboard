@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      args:
+        - HTTP_PROXY=${HTTP_PROXY}
+        - HTTPS_PROXY=${HTTP_PROXY}
+    environment:
+      # 基本設定
+      - TZ=Asia/Tokyo
+      - VERSION=${VERSION}
+      - DEBUG=${DEBUG}

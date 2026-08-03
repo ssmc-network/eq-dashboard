@@ -5,4 +5,6 @@ __pycache__/
 .venv
 venv
 .env
-*.db
+.mypy_cache
+.pytest_cache
+.ruff_cache

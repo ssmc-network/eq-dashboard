@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      target: dev
+    command: bash
+    tty: true
+    stdin_open: true
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTP_PROXY}
