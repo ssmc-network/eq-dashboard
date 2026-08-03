@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}システム設定 - EQ Dashboard{% endblock %}
+{% block page_title %}システム設定{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>システム設定</h1>
+    <p>動作モード・テーマ・ダッシュボードの既定動作を設定します。</p>
+  </div>
+</div>
+
+<form class="card" method="post" action="/ui/settings">
+  <div class="settings-form">
+    <fieldset class="settings-field mode-toggle-field">
+      <span>動作モード</span>
+      <div class="mode-toggle" role="radiogroup" aria-label="動作モード">
+        <input type="radio" id="mode-offline" name="operation_mode" value="offline" {% if operation_mode == "offline" %}checked{% endif %}>
+        <label for="mode-offline">オフライン</label>
+        <input type="radio" id="mode-online" name="operation_mode" value="online" {% if operation_mode == "online" %}checked{% endif %}>
+        <label for="mode-online">オンライン</label>
+      </div>
+    </fieldset>
+    <label class="settings-field">
+      <span>テーマ</span>
+      <select name="theme">
+        <option value="system" {% if theme == "system" %}selected{% endif %}>システム(自動)</option>
+        <option value="light" {% if theme == "light" %}selected{% endif %}>ライト</option>
+        <option value="dark" {% if theme == "dark" %}selected{% endif %}>ダーク</option>
+      </select>
+    </label>
+    <label class="settings-field">
+      <span>デフォルトキャンバス</span>
+      <select name="default_layout_id">
+        {% for meta in available_layouts %}
+        <option value="{{ meta.id }}" {% if meta.id == default_layout_id %}selected{% endif %}>{{ meta.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="settings-field">
+      <span>ダッシュボードの初期更新間隔(秒)</span>
+      <input type="number" name="default_refresh_interval" min="1" step="1" value="{{ default_refresh_interval }}">
+    </label>
+  </div>
+  <button type="submit" class="btn btn--accent">保存</button>
+</form>
+
+<div class="page-header page-header--section">
+  <div>
+    <h2>関連設定</h2>
+  </div>
+</div>
+<div class="nav-grid">
+  <a class="nav-card" href="/ui/api-sources">
+    <span class="nav-card__icon">⇄</span>
+    <span class="nav-card__title">Online設定</span>
+    <span class="nav-card__desc">オンラインモードで使用するAPI接続先・認証・エンドポイントを管理します。</span>
+  </a>
+  <a class="nav-card" href="/ui/tag-mappings">
+    <span class="nav-card__icon">#</span>
+    <span class="nav-card__title">タグマッピング</span>
+    <span class="nav-card__desc">APIレスポンス項目と内部タグを紐づけます。</span>
+  </a>
+  <a class="nav-card" href="/ui/standalone">
+    <span class="nav-card__icon">⇅</span>
+    <span class="nav-card__title">Offline設定</span>
+    <span class="nav-card__desc">オフラインモードで使用するレイアウト・状態JSONのexport/importを行います。</span>
+  </a>
+</div>
+{% endblock %}

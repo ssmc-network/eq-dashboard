@@ -1,0 +1,232 @@
+(function () {
+  const initialDataEl = document.getElementById("initial-layout");
+  const canvas = document.getElementById("editor-canvas");
+  if (!initialDataEl || !canvas) return;
+
+  const initial = JSON.parse(initialDataEl.textContent);
+
+  const state = {
+    id: initial.layout.id || "",
+    name: initial.layout.name || "",
+    width: initial.layout.width || 900,
+    height: initial.layout.height || 420,
+    items: (initial.items || []).map((it) => ({ ...it })),
+  };
+  let nextSeq = state.items.length + 1;
+  let selectedId = null;
+
+  const metaId = document.getElementById("meta-id");
+  const metaName = document.getElementById("meta-name");
+  const metaWidth = document.getElementById("meta-width");
+  const metaHeight = document.getElementById("meta-height");
+  const addBtn = document.getElementById("add-item-btn");
+  const downloadBtn = document.getElementById("download-btn");
+  const statusEl = document.getElementById("editor-status");
+
+  const panelEmpty = document.getElementById("editor-panel-empty");
+  const panelForm = document.getElementById("editor-panel-form");
+  const fieldLabel = document.getElementById("item-label");
+  const fieldTagId = document.getElementById("item-tag-id");
+  const fieldX = document.getElementById("item-x");
+  const fieldY = document.getElementById("item-y");
+  const fieldW = document.getElementById("item-w");
+  const fieldH = document.getElementById("item-h");
+  const deleteBtn = document.getElementById("delete-item-btn");
+
+  function findItem(id) {
+    return state.items.find((it) => it.id === id) || null;
+  }
+
+  function renderCanvasSize() {
+    canvas.style.width = `${state.width}px`;
+    canvas.style.height = `${state.height}px`;
+  }
+
+  function renderStatus() {
+    statusEl.textContent = `${state.items.length}件の装置`;
+  }
+
+  function renderItems() {
+    canvas.innerHTML = "";
+    state.items.forEach((item) => {
+      const box = document.createElement("div");
+      box.className = "eq-editable-box" + (item.id === selectedId ? " is-selected" : "");
+      box.style.left = `${item.x}px`;
+      box.style.top = `${item.y}px`;
+      box.style.width = `${item.w}px`;
+      box.style.height = `${item.h}px`;
+
+      const label = document.createElement("span");
+      label.className = "eq-editable-box__label";
+      label.textContent = item.label || "(no label)";
+      box.appendChild(label);
+
+      const handle = document.createElement("span");
+      handle.className = "eq-editable-box__resize-handle";
+      box.appendChild(handle);
+
+      box.addEventListener("pointerdown", (e) => startDrag(e, item, box));
+      handle.addEventListener("pointerdown", (e) => startResize(e, item, box));
+
+      canvas.appendChild(box);
+    });
+  }
+
+  function select(id) {
+    selectedId = id;
+    const item = findItem(id);
+    if (!item) {
+      panelEmpty.hidden = false;
+      panelForm.hidden = true;
+      renderItems();
+      return;
+    }
+    panelEmpty.hidden = true;
+    panelForm.hidden = false;
+    fieldLabel.value = item.label;
+    fieldTagId.value = item.tagId;
+    fieldX.value = item.x;
+    fieldY.value = item.y;
+    fieldW.value = item.w;
+    fieldH.value = item.h;
+    renderItems();
+  }
+
+  function startDrag(e, item, box) {
+    e.preventDefault();
+    e.stopPropagation();
+    select(item.id);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const originX = item.x;
+    const originY = item.y;
+
+    function onMove(ev) {
+      item.x = Math.max(0, originX + (ev.clientX - startX));
+      item.y = Math.max(0, originY + (ev.clientY - startY));
+      box.style.left = `${item.x}px`;
+      box.style.top = `${item.y}px`;
+      if (selectedId === item.id) {
+        fieldX.value = item.x;
+        fieldY.value = item.y;
+      }
+    }
+
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function startResize(e, item, box) {
+    e.preventDefault();
+    e.stopPropagation();
+    select(item.id);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const originW = item.w;
+    const originH = item.h;
+
+    function onMove(ev) {
+      item.w = Math.max(20, originW + (ev.clientX - startX));
+      item.h = Math.max(20, originH + (ev.clientY - startY));
+      box.style.width = `${item.w}px`;
+      box.style.height = `${item.h}px`;
+      if (selectedId === item.id) {
+        fieldW.value = item.w;
+        fieldH.value = item.h;
+      }
+    }
+
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    }
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    if (e.target === canvas) select(null);
+  });
+
+  function bindField(el, key, isNumber) {
+    el.addEventListener("input", () => {
+      const item = findItem(selectedId);
+      if (!item) return;
+      item[key] = isNumber ? Number(el.value) || 0 : el.value;
+      renderItems();
+    });
+  }
+  bindField(fieldLabel, "label", false);
+  bindField(fieldTagId, "tagId", false);
+  bindField(fieldX, "x", true);
+  bindField(fieldY, "y", true);
+  bindField(fieldW, "w", true);
+  bindField(fieldH, "h", true);
+
+  deleteBtn.addEventListener("click", () => {
+    state.items = state.items.filter((it) => it.id !== selectedId);
+    renderStatus();
+    select(null);
+  });
+
+  addBtn.addEventListener("click", () => {
+    const id = `item-${nextSeq++}`;
+    state.items.push({ id, label: "新規装置", x: 40, y: 40, w: 120, h: 80, tagId: "" });
+    renderStatus();
+    select(id);
+  });
+
+  metaId.addEventListener("input", () => {
+    state.id = metaId.value;
+  });
+  metaName.addEventListener("input", () => {
+    state.name = metaName.value;
+  });
+  metaWidth.addEventListener("input", () => {
+    state.width = Number(metaWidth.value) || 100;
+    renderCanvasSize();
+  });
+  metaHeight.addEventListener("input", () => {
+    state.height = Number(metaHeight.value) || 100;
+    renderCanvasSize();
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    if (!state.id || !state.name) {
+      window.alert("ID と 名前 を入力してください。");
+      return;
+    }
+    const payload = {
+      schemaVersion: "1.0",
+      layout: { id: state.id, name: state.name, width: state.width, height: state.height },
+      items: state.items.map((it) => ({
+        id: it.id,
+        label: it.label,
+        x: it.x,
+        y: it.y,
+        w: it.w,
+        h: it.h,
+        tagId: it.tagId,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${state.id || "layout"}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  renderCanvasSize();
+  renderItems();
+  renderStatus();
+})();

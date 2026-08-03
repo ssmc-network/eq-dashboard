@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "layout": {
+    "id": "room-b",
+    "name": "2F 検査室",
+    "width": 700,
+    "height": 380
+  },
+  "items": [
+    { "id": "r1", "label": "検査装置X", "x": 60, "y": 60, "w": 220, "h": 120, "tagId": "run_state_x" },
+    { "id": "r2", "label": "検査装置Y", "x": 320, "y": 60, "w": 220, "h": 120, "tagId": "run_state_y" },
+    { "id": "r3", "label": "記録端末Z", "x": 60, "y": 220, "w": 220, "h": 100, "tagId": "run_state_z" }
+  ]
+}

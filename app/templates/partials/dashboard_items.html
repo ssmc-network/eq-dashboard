@@ -1,0 +1,9 @@
+<div class="dashboard-canvas" style="width: {{ layout.layout.width }}px; height: {{ layout.layout.height }}px;">
+  {% for box in boxes %}
+  <div class="eq-box eq-box--{{ box.status_value }}"
+       style="left: {{ box.x }}px; top: {{ box.y }}px; width: {{ box.w }}px; height: {{ box.h }}px;"
+       title="{{ box.label }} / {{ box.status_label }} / 更新: {{ box.updated_at.strftime('%H:%M:%S') }}">
+    <span class="eq-box__label">{{ box.label }}</span>
+  </div>
+  {% endfor %}
+</div>

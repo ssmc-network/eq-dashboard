@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "layout": {
+    "id": "line-a",
+    "name": "Line A",
+    "width": 900,
+    "height": 420
+  },
+  "items": [
+    { "id": "m1", "label": "搬送機A", "x": 60, "y": 60, "w": 60, "h": 300, "tagId": "run_state_a" },
+    { "id": "m2", "label": "プレス機B", "x": 140, "y": 60, "w": 60, "h": 300, "tagId": "run_state_b" },
+    { "id": "m3", "label": "溶接ロボットC", "x": 320, "y": 60, "w": 280, "h": 140, "tagId": "run_state_c" },
+    { "id": "m4", "label": "検査装置D", "x": 320, "y": 220, "w": 280, "h": 140, "tagId": "run_state_d" },
+    { "id": "m5", "label": "梱包機E", "x": 680, "y": 60, "w": 160, "h": 140, "tagId": "run_state_e" },
+    { "id": "m6", "label": "搬送機F", "x": 680, "y": 220, "w": 160, "h": 140, "tagId": "run_state_f" }
+  ]
+}

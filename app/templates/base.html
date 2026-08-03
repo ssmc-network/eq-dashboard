@@ -1,0 +1,43 @@
+{% set nav_items = [
+  {"href": "/ui/dashboard", "icon": "▦", "label": "ダッシュボード"},
+  {"href": "/ui/layouts", "icon": "⬚", "label": "レイアウト編集"},
+  {"href": "/ui/settings", "icon": "⚙", "label": "システム設定", "also": ["/ui/api-sources", "/ui/tag-mappings", "/ui/standalone"]},
+] %}
+<!DOCTYPE html>
+<html lang="ja" {% if request.cookies.get("theme") in ["light", "dark"] %}data-theme="{{ request.cookies.get('theme') }}"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EQ Dashboard{% endblock %}</title>
+  <script src="/static/js/htmx.min.js"></script>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <span class="sidebar__brand-mark">⌁</span>
+        <span class="sidebar__brand-text">EQ Dashboard<small>設備稼働状態可視化</small></span>
+      </div>
+      <nav class="sidebar__nav" aria-label="画面ナビゲーション">
+        {% for item in nav_items %}
+        {% set ns = namespace(active=(request.url.path == item.href or request.url.path.startswith(item.href + "/"))) %}
+        {% for extra in item.also|default([]) %}
+          {% if request.url.path == extra or request.url.path.startswith(extra + "/") %}{% set ns.active = true %}{% endif %}
+        {% endfor %}
+        <a class="sidebar__link" href="{{ item.href }}" {% if ns.active %}aria-current="page"{% endif %}>
+          <span class="sidebar__link-icon">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+    </aside>
+    <header class="topbar">
+      <span class="topbar__title">{% block page_title %}{% endblock %}</span>
+    </header>
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

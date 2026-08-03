@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}レイアウト編集 - EQ Dashboard{% endblock %}
+{% block page_title %}レイアウト編集{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>キャンバス一覧</h1>
+    <p>編集するキャンバスを選択するか、新しいキャンバスを作成します。</p>
+  </div>
+</div>
+
+<div class="nav-grid">
+  {% for meta in layouts %}
+  <a class="nav-card" href="/ui/layouts/{{ meta.id }}/edit">
+    <span class="nav-card__icon">⬚</span>
+    <span class="nav-card__title">{{ meta.name }}</span>
+    <span class="nav-card__desc">{{ meta.width }} × {{ meta.height }}px / id: {{ meta.id }}</span>
+  </a>
+  {% endfor %}
+  <a class="nav-card" href="/ui/layouts/new">
+    <span class="nav-card__icon">＋</span>
+    <span class="nav-card__title">新規キャンバス</span>
+    <span class="nav-card__desc">空のキャンバスを新しく作成します。</span>
+  </a>
+</div>
+{% endblock %}
