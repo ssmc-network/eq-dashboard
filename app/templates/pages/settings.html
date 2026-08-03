@@ -3,13 +3,38 @@
 {% block page_title %}システム設定{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>システム設定</h1>
-  <p>動作モード(db_connected / standalone)や共通設定を切り替えます。</p>
+  <div>
+    <h1>システム設定</h1>
+    <p>動作モード(db_connected / standalone)や共通設定を切り替えます。</p>
+  </div>
 </div>
 <div class="card">
   <div class="placeholder">
     <span class="badge">準備中</span>
-    <p>設定画面はフェーズ4で実装予定です。</p>
+    <p>動作モード切替などの一般設定はフェーズ4で実装予定です。</p>
   </div>
+</div>
+
+<div class="page-header page-header--section">
+  <div>
+    <h2>関連設定</h2>
+  </div>
+</div>
+<div class="nav-grid">
+  <a class="nav-card" href="/ui/api-sources">
+    <span class="nav-card__icon">⇄</span>
+    <span class="nav-card__title">API設定</span>
+    <span class="nav-card__desc">接続先・認証・エンドポイントを管理します。</span>
+  </a>
+  <a class="nav-card" href="/ui/tag-mappings">
+    <span class="nav-card__icon">#</span>
+    <span class="nav-card__title">タグマッピング</span>
+    <span class="nav-card__desc">APIレスポンス項目と内部タグを紐づけます。</span>
+  </a>
+  <a class="nav-card" href="/ui/standalone">
+    <span class="nav-card__icon">⇅</span>
+    <span class="nav-card__title">スタンドアロン管理</span>
+    <span class="nav-card__desc">レイアウト・状態JSONのimport/exportを行います。</span>
+  </a>
 </div>
 {% endblock %}

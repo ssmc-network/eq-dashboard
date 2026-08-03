@@ -2,10 +2,7 @@
   {"href": "/", "icon": "⌂", "label": "ホーム"},
   {"href": "/ui/dashboard", "icon": "▦", "label": "ダッシュボード"},
   {"href": "/ui/layouts", "icon": "⬚", "label": "レイアウト編集"},
-  {"href": "/ui/api-sources", "icon": "⇄", "label": "API設定"},
-  {"href": "/ui/tag-mappings", "icon": "#", "label": "タグマッピング"},
-  {"href": "/ui/standalone", "icon": "⇅", "label": "スタンドアロン管理"},
-  {"href": "/ui/settings", "icon": "⚙", "label": "システム設定"},
+  {"href": "/ui/settings", "icon": "⚙", "label": "システム設定", "also": ["/ui/api-sources", "/ui/tag-mappings", "/ui/standalone"]},
 ] %}
 <!DOCTYPE html>
 <html lang="ja">
@@ -25,8 +22,11 @@
       </div>
       <nav class="sidebar__nav" aria-label="画面ナビゲーション">
         {% for item in nav_items %}
-        <a class="sidebar__link" href="{{ item.href }}"
-           {% if request.url.path == item.href or (item.href != "/" and request.url.path.startswith(item.href + "/")) %}aria-current="page"{% endif %}>
+        {% set ns = namespace(active=(request.url.path == item.href or (item.href != "/" and request.url.path.startswith(item.href + "/")))) %}
+        {% for extra in item.also|default([]) %}
+          {% if request.url.path == extra or request.url.path.startswith(extra + "/") %}{% set ns.active = true %}{% endif %}
+        {% endfor %}
+        <a class="sidebar__link" href="{{ item.href }}" {% if ns.active %}aria-current="page"{% endif %}>
           <span class="sidebar__link-icon">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
         </a>

@@ -254,6 +254,15 @@ button {
   font-size: 0.9rem;
 }
 
+.page-header--section {
+  margin-top: 2rem;
+}
+
+.page-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
 /* ==========================================
    共通コンポーネント
    ========================================== */
