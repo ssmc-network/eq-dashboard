@@ -1,15 +1,57 @@
 {% extends "base.html" %}
-{% block title %}レイアウト編集 - EQ Dashboard{% endblock %}
+{% block title %}{{ "新規キャンバス" if is_new else layout.layout.name }} 編集 - EQ Dashboard{% endblock %}
 {% block page_title %}レイアウト編集{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>レイアウト編集</h1>
-  <p>箱図形の追加・配置・サイズ変更、設備/タグの紐づけを行います。</p>
-</div>
-<div class="card">
-  <div class="placeholder">
-    <span class="badge">準備中</span>
-    <p>編集UIはフェーズ2で実装予定です。</p>
+  <div>
+    <h1>{{ "新規キャンバス" if is_new else layout.layout.name + " を編集" }}</h1>
+    <p>装置図形をドラッグで配置・リサイズし、稼働状態のタグと紐づけます。編集内容はJSONとしてダウンロードできます。</p>
   </div>
+  <a class="btn-link" href="/ui/layouts">← キャンバス一覧へ</a>
 </div>
+
+<div class="dashboard-toolbar">
+  <label class="toolbar-field">
+    <span>ID</span>
+    <input type="text" id="meta-id" value="{{ layout.layout.id }}" placeholder="line-a">
+  </label>
+  <label class="toolbar-field">
+    <span>名前</span>
+    <input type="text" id="meta-name" value="{{ layout.layout.name }}" placeholder="1F 組立ライン">
+  </label>
+  <label class="toolbar-field">
+    <span>幅</span>
+    <input type="number" id="meta-width" min="100" step="10" value="{{ layout.layout.width }}">
+  </label>
+  <label class="toolbar-field">
+    <span>高さ</span>
+    <input type="number" id="meta-height" min="100" step="10" value="{{ layout.layout.height }}">
+  </label>
+  <button type="button" id="add-item-btn" class="btn">＋ 装置を追加</button>
+  <button type="button" id="download-btn" class="btn btn--accent">JSONをダウンロード</button>
+  <span class="badge" id="editor-status">{{ layout.items|length }}件の装置</span>
+</div>
+
+<div class="editor-layout">
+  <div class="dashboard-canvas-wrap">
+    <div id="editor-canvas" class="dashboard-canvas"></div>
+  </div>
+  <aside class="editor-panel">
+    <p class="editor-panel__empty" id="editor-panel-empty">装置をクリックすると編集できます。</p>
+    <div class="editor-panel__form" id="editor-panel-form" hidden>
+      <label>ラベル<input type="text" id="item-label"></label>
+      <label>タグID<input type="text" id="item-tag-id"></label>
+      <div class="editor-panel__grid">
+        <label>X<input type="number" id="item-x"></label>
+        <label>Y<input type="number" id="item-y"></label>
+        <label>幅<input type="number" id="item-w" min="10"></label>
+        <label>高さ<input type="number" id="item-h" min="10"></label>
+      </div>
+      <button type="button" id="delete-item-btn" class="btn btn--danger">この装置を削除</button>
+    </div>
+  </aside>
+</div>
+
+<script id="initial-layout" type="application/json">{{ initial_layout_json | safe }}</script>
+<script src="/static/js/layout_editor.js"></script>
 {% endblock %}

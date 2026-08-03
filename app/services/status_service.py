@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from providers.json_status_provider import JsonStatusProvider, LayoutFileNotFoundError
-from schemas.layout import LayoutDefinition, LayoutMeta
+from providers.json_status_provider import JsonStatusProvider
+from schemas.layout import LayoutDefinition
+from services.layout_service import get_layout
 
 STATUS_LABELS = {
     "running": "稼働中",
@@ -26,21 +27,9 @@ class DashboardBox:
     updated_at: datetime
 
 
-class LayoutNotFoundError(Exception):
-    pass
-
-
-def list_layouts() -> list[LayoutMeta]:
-    return _provider.list_layouts()
-
-
 def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]:
-    try:
-        layout = _provider.load_layout(layout_id)
-        status = _provider.load_status(layout_id)
-    except LayoutFileNotFoundError as exc:
-        raise LayoutNotFoundError(layout_id) from exc
-
+    layout = get_layout(layout_id)
+    status = _provider.load_status(layout_id)
     status_by_tag = {s.tag_id: s for s in status.statuses}
 
     boxes = []

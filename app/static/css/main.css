@@ -496,3 +496,168 @@ button {
     animation: none;
   }
 }
+
+/* ==========================================
+   ボタン / リンク
+   ========================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--panel-sunken);
+}
+
+.btn--accent {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: #ffffff;
+}
+
+.btn--accent:hover {
+  background: var(--accent-strong);
+}
+
+.btn--danger {
+  width: 100%;
+  justify-content: center;
+  background: var(--status-alarm-soft);
+  border-color: var(--status-alarm);
+  color: var(--status-alarm);
+}
+
+.btn--danger:hover {
+  background: var(--status-alarm);
+  color: #ffffff;
+}
+
+.btn-link {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.btn-link:hover {
+  color: var(--accent);
+}
+
+/* ==========================================
+   レイアウト編集
+   ========================================== */
+.editor-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.editor-layout .dashboard-canvas-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.editor-panel {
+  width: 260px;
+  flex: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.editor-panel__empty {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.editor-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.editor-panel__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.editor-panel__form input {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--panel-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.55rem;
+}
+
+.editor-panel__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.eq-editable-box {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  background: var(--accent-soft);
+  border: 2px dashed var(--accent);
+  border-radius: 2px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.eq-editable-box:active {
+  cursor: grabbing;
+}
+
+.eq-editable-box.is-selected {
+  border-style: solid;
+  box-shadow: 0 0 0 2px var(--accent-soft-strong);
+}
+
+.eq-editable-box__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+  text-align: center;
+  pointer-events: none;
+}
+
+.eq-editable-box__resize-handle {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: 2px solid var(--panel);
+  cursor: nwse-resize;
+  opacity: 0;
+}
+
+.eq-editable-box.is-selected .eq-editable-box__resize-handle {
+  opacity: 1;
+}
