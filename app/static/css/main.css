@@ -752,6 +752,49 @@ button {
   padding: 0.45rem 0.6rem;
 }
 
+.mode-toggle-field {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.mode-toggle {
+  position: relative;
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-sunken);
+  overflow: hidden;
+}
+
+.mode-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode-toggle label {
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.mode-toggle input:checked + label {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.mode-toggle input:focus-visible + label {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ==========================================
    スタンドアロン管理
    ========================================== */

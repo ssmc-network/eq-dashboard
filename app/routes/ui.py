@@ -15,6 +15,7 @@ templates = Jinja2Templates(directory="templates")
 DEFAULT_LAYOUT_ID = "line-a"
 DEFAULT_REFRESH_INTERVAL_SEC = 10
 THEME_CHOICES = ("system", "light", "dark")
+OPERATION_MODE_CHOICES = ("online", "offline")
 SETTINGS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 
@@ -103,7 +104,11 @@ async def layout_editor_edit(request: Request, layout_id: str) -> HTMLResponse:
 
 @router.get("/ui/api-sources", response_class=HTMLResponse)
 async def api_sources(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "pages/api_settings.html", {})
+    return templates.TemplateResponse(
+        request,
+        "pages/api_settings.html",
+        {"operation_mode": _get_operation_mode(request)},
+    )
 
 
 @router.get("/ui/tag-mappings", response_class=HTMLResponse)
@@ -116,7 +121,10 @@ async def standalone(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "pages/standalone.html",
-        {"available_layouts": list_layouts()},
+        {
+            "available_layouts": list_layouts(),
+            "operation_mode": _get_operation_mode(request),
+        },
     )
 
 
@@ -153,6 +161,7 @@ async def settings(request: Request) -> HTMLResponse:
         "pages/settings.html",
         {
             "theme": _get_theme(request),
+            "operation_mode": _get_operation_mode(request),
             "available_layouts": layouts,
             "default_layout_id": default_layout_id,
             "default_refresh_interval": _get_default_refresh_interval(request),
@@ -163,11 +172,15 @@ async def settings(request: Request) -> HTMLResponse:
 @router.post("/ui/settings")
 async def save_settings(
     theme: str = Form("system"),
+    operation_mode: str = Form("offline"),
     default_layout_id: str = Form(DEFAULT_LAYOUT_ID),
     default_refresh_interval: int = Form(DEFAULT_REFRESH_INTERVAL_SEC),
 ) -> RedirectResponse:
     if theme not in THEME_CHOICES:
         theme = "system"
+
+    if operation_mode not in OPERATION_MODE_CHOICES:
+        operation_mode = "offline"
 
     valid_ids = {meta.id for meta in list_layouts()}
     if default_layout_id not in valid_ids:
@@ -178,6 +191,7 @@ async def save_settings(
 
     response = RedirectResponse(url="/ui/settings", status_code=303)
     response.set_cookie("theme", theme, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
+    response.set_cookie("operation_mode", operation_mode, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
     response.set_cookie("default_layout_id", default_layout_id, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
     response.set_cookie(
         "default_refresh_interval",
@@ -202,6 +216,11 @@ def _serialize_layout(layout: LayoutDefinition) -> str:
 def _get_theme(request: Request) -> str:
     theme = request.cookies.get("theme", "system")
     return theme if theme in THEME_CHOICES else "system"
+
+
+def _get_operation_mode(request: Request) -> str:
+    mode = request.cookies.get("operation_mode", "offline")
+    return mode if mode in OPERATION_MODE_CHOICES else "offline"
 
 
 def _get_default_refresh_interval(request: Request) -> int:

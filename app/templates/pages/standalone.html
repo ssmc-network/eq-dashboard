@@ -1,21 +1,21 @@
 {% extends "base.html" %}
-{% block title %}スタンドアロン管理 - EQ Dashboard{% endblock %}
-{% block page_title %}スタンドアロン管理{% endblock %}
+{% block title %}Offline設定 - EQ Dashboard{% endblock %}
+{% block page_title %}Offline設定{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>スタンドアロン管理</h1>
-    <p>レイアウト・状態JSONのexport/importを行います。</p>
+    <h1>Offline設定</h1>
+    <p>オフラインモードで使用するレイアウト・状態JSONのexport/importを行います。</p>
   </div>
   <a class="btn-link" href="/ui/settings">← システム設定へ</a>
 </div>
 
 <div class="card">
   <div class="placeholder">
-    <span class="badge">現在の動作モード: スタンドアロン</span>
+    <span class="badge">現在の動作モード: {{ "オンライン" if operation_mode == "online" else "オフライン" }}</span>
     <p>
       装置状態はサーバー上のサンプルJSON(layout.json / status.json)から取得しています。
-      外部REST APIに接続する db_connected モードは、バックエンドとの接続実装後に対応予定です。
+      外部REST APIに接続するオンラインモードは、バックエンドとの接続実装後に対応予定です。
     </p>
   </div>
 </div>

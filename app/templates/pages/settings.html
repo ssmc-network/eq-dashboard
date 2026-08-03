@@ -5,12 +5,21 @@
 <div class="page-header">
   <div>
     <h1>システム設定</h1>
-    <p>テーマやダッシュボードの既定動作を設定します。動作モード(db_connected / standalone)の切替はバックエンド接続後のフェーズ4で対応予定です。</p>
+    <p>動作モード・テーマ・ダッシュボードの既定動作を設定します。</p>
   </div>
 </div>
 
 <form class="card" method="post" action="/ui/settings">
   <div class="settings-form">
+    <fieldset class="settings-field mode-toggle-field">
+      <span>動作モード</span>
+      <div class="mode-toggle" role="radiogroup" aria-label="動作モード">
+        <input type="radio" id="mode-offline" name="operation_mode" value="offline" {% if operation_mode == "offline" %}checked{% endif %}>
+        <label for="mode-offline">オフライン</label>
+        <input type="radio" id="mode-online" name="operation_mode" value="online" {% if operation_mode == "online" %}checked{% endif %}>
+        <label for="mode-online">オンライン</label>
+      </div>
+    </fieldset>
     <label class="settings-field">
       <span>テーマ</span>
       <select name="theme">
@@ -43,8 +52,8 @@
 <div class="nav-grid">
   <a class="nav-card" href="/ui/api-sources">
     <span class="nav-card__icon">⇄</span>
-    <span class="nav-card__title">API設定</span>
-    <span class="nav-card__desc">接続先・認証・エンドポイントを管理します。</span>
+    <span class="nav-card__title">Online設定</span>
+    <span class="nav-card__desc">オンラインモードで使用するAPI接続先・認証・エンドポイントを管理します。</span>
   </a>
   <a class="nav-card" href="/ui/tag-mappings">
     <span class="nav-card__icon">#</span>
@@ -53,8 +62,8 @@
   </a>
   <a class="nav-card" href="/ui/standalone">
     <span class="nav-card__icon">⇅</span>
-    <span class="nav-card__title">スタンドアロン管理</span>
-    <span class="nav-card__desc">レイアウト・状態JSONのimport/exportを行います。</span>
+    <span class="nav-card__title">Offline設定</span>
+    <span class="nav-card__desc">オフラインモードで使用するレイアウト・状態JSONのexport/importを行います。</span>
   </a>
 </div>
 {% endblock %}
