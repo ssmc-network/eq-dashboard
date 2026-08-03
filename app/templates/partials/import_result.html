@@ -1,0 +1,22 @@
+{% if result.ok %}
+<div class="import-result import-result--ok">
+  <p class="import-result__title">✓ {{ filename }} は正しい{{ kind }}JSONです。</p>
+  <dl class="import-result__summary">
+    {% for key, value in result.summary.items() %}
+    <div>
+      <dt>{{ key }}</dt>
+      <dd>{{ value }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% else %}
+<div class="import-result import-result--error">
+  <p class="import-result__title">✕ {{ filename }} は無効な{{ kind }}JSONです。</p>
+  <ul class="import-result__errors">
+    {% for err in result.errors %}
+    <li>{{ err }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

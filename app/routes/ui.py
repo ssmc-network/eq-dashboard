@@ -1,10 +1,11 @@
 import json
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from schemas.layout import LayoutDefinition, LayoutMeta
+from services.import_export_service import validate_layout_json, validate_status_json
 from services.layout_service import LayoutNotFoundError, get_layout, list_layouts
 from services.status_service import get_dashboard
 
@@ -112,7 +113,31 @@ async def tag_mappings(request: Request) -> HTMLResponse:
 
 @router.get("/ui/standalone", response_class=HTMLResponse)
 async def standalone(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "pages/standalone.html", {})
+    return templates.TemplateResponse(
+        request,
+        "pages/standalone.html",
+        {"available_layouts": list_layouts()},
+    )
+
+
+@router.post("/ui/standalone/layout/import", response_class=HTMLResponse)
+async def standalone_import_layout(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
+    result = validate_layout_json(await file.read())
+    return templates.TemplateResponse(
+        request,
+        "partials/import_result.html",
+        {"result": result, "kind": "レイアウト", "filename": file.filename},
+    )
+
+
+@router.post("/ui/standalone/status/import", response_class=HTMLResponse)
+async def standalone_import_status(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
+    result = validate_status_json(await file.read())
+    return templates.TemplateResponse(
+        request,
+        "partials/import_result.html",
+        {"result": result, "kind": "状態", "filename": file.filename},
+    )
 
 
 @router.get("/ui/settings", response_class=HTMLResponse)

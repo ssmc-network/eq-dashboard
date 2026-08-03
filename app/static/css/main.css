@@ -751,3 +751,107 @@ button {
   border-radius: var(--radius-sm);
   padding: 0.45rem 0.6rem;
 }
+
+/* ==========================================
+   スタンドアロン管理
+   ========================================== */
+.standalone-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.standalone-grid .card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.standalone-grid .card h3 {
+  margin-top: 1.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.standalone-section__desc {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.standalone-form {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.standalone-form select,
+.standalone-form input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--panel-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.55rem;
+}
+
+.import-result {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.import-result--ok {
+  background: var(--status-running-soft);
+  border-color: var(--status-running);
+}
+
+.import-result--error {
+  background: var(--status-alarm-soft);
+  border-color: var(--status-alarm);
+}
+
+.import-result__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.import-result__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.4rem 1rem;
+  margin-top: 0.6rem;
+}
+
+.import-result__summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.import-result__summary dt {
+  font-size: 0.68rem;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.import-result__summary dd {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.import-result__errors {
+  margin: 0.6rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.82rem;
+  color: var(--status-alarm);
+}
