@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -13,6 +13,8 @@ templates = Jinja2Templates(directory="templates")
 
 DEFAULT_LAYOUT_ID = "line-a"
 DEFAULT_REFRESH_INTERVAL_SEC = 10
+THEME_CHOICES = ("system", "light", "dark")
+SETTINGS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 
 @router.get("/")
@@ -21,8 +23,12 @@ async def root() -> RedirectResponse:
 
 
 @router.get("/ui/dashboard")
-async def dashboard_default() -> RedirectResponse:
-    return RedirectResponse(url=f"/ui/dashboard/{DEFAULT_LAYOUT_ID}")
+async def dashboard_default(request: Request) -> RedirectResponse:
+    valid_ids = {meta.id for meta in list_layouts()}
+    layout_id = request.cookies.get("default_layout_id")
+    if layout_id not in valid_ids:
+        layout_id = DEFAULT_LAYOUT_ID
+    return RedirectResponse(url=f"/ui/dashboard/{layout_id}")
 
 
 @router.get("/ui/dashboard/{layout_id}", response_class=HTMLResponse)
@@ -35,7 +41,7 @@ async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
             "layout": layout,
             "boxes": boxes,
             "available_layouts": list_layouts(),
-            "default_refresh_interval": DEFAULT_REFRESH_INTERVAL_SEC,
+            "default_refresh_interval": _get_default_refresh_interval(request),
         },
     )
 
@@ -111,7 +117,50 @@ async def standalone(request: Request) -> HTMLResponse:
 
 @router.get("/ui/settings", response_class=HTMLResponse)
 async def settings(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "pages/settings.html", {})
+    layouts = list_layouts()
+    valid_ids = {meta.id for meta in layouts}
+    default_layout_id = request.cookies.get("default_layout_id")
+    if default_layout_id not in valid_ids:
+        default_layout_id = DEFAULT_LAYOUT_ID
+
+    return templates.TemplateResponse(
+        request,
+        "pages/settings.html",
+        {
+            "theme": _get_theme(request),
+            "available_layouts": layouts,
+            "default_layout_id": default_layout_id,
+            "default_refresh_interval": _get_default_refresh_interval(request),
+        },
+    )
+
+
+@router.post("/ui/settings")
+async def save_settings(
+    theme: str = Form("system"),
+    default_layout_id: str = Form(DEFAULT_LAYOUT_ID),
+    default_refresh_interval: int = Form(DEFAULT_REFRESH_INTERVAL_SEC),
+) -> RedirectResponse:
+    if theme not in THEME_CHOICES:
+        theme = "system"
+
+    valid_ids = {meta.id for meta in list_layouts()}
+    if default_layout_id not in valid_ids:
+        default_layout_id = DEFAULT_LAYOUT_ID
+
+    if default_refresh_interval < 1:
+        default_refresh_interval = DEFAULT_REFRESH_INTERVAL_SEC
+
+    response = RedirectResponse(url="/ui/settings", status_code=303)
+    response.set_cookie("theme", theme, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
+    response.set_cookie("default_layout_id", default_layout_id, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
+    response.set_cookie(
+        "default_refresh_interval",
+        str(default_refresh_interval),
+        max_age=SETTINGS_COOKIE_MAX_AGE,
+        samesite="lax",
+    )
+    return response
 
 
 def _load_dashboard(layout_id: str):
@@ -123,3 +172,17 @@ def _load_dashboard(layout_id: str):
 
 def _serialize_layout(layout: LayoutDefinition) -> str:
     return json.dumps(layout.model_dump(by_alias=True), ensure_ascii=False).replace("</", "<\\/")
+
+
+def _get_theme(request: Request) -> str:
+    theme = request.cookies.get("theme", "system")
+    return theme if theme in THEME_CHOICES else "system"
+
+
+def _get_default_refresh_interval(request: Request) -> int:
+    raw = request.cookies.get("default_refresh_interval")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_REFRESH_INTERVAL_SEC
+    return value if value >= 1 else DEFAULT_REFRESH_INTERVAL_SEC

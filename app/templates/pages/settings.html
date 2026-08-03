@@ -5,15 +5,35 @@
 <div class="page-header">
   <div>
     <h1>システム設定</h1>
-    <p>動作モード(db_connected / standalone)や共通設定を切り替えます。</p>
+    <p>テーマやダッシュボードの既定動作を設定します。動作モード(db_connected / standalone)の切替はバックエンド接続後のフェーズ4で対応予定です。</p>
   </div>
 </div>
-<div class="card">
-  <div class="placeholder">
-    <span class="badge">準備中</span>
-    <p>動作モード切替などの一般設定はフェーズ4で実装予定です。</p>
+
+<form class="card" method="post" action="/ui/settings">
+  <div class="settings-form">
+    <label class="settings-field">
+      <span>テーマ</span>
+      <select name="theme">
+        <option value="system" {% if theme == "system" %}selected{% endif %}>システム(自動)</option>
+        <option value="light" {% if theme == "light" %}selected{% endif %}>ライト</option>
+        <option value="dark" {% if theme == "dark" %}selected{% endif %}>ダーク</option>
+      </select>
+    </label>
+    <label class="settings-field">
+      <span>デフォルトキャンバス</span>
+      <select name="default_layout_id">
+        {% for meta in available_layouts %}
+        <option value="{{ meta.id }}" {% if meta.id == default_layout_id %}selected{% endif %}>{{ meta.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="settings-field">
+      <span>ダッシュボードの初期更新間隔(秒)</span>
+      <input type="number" name="default_refresh_interval" min="1" step="1" value="{{ default_refresh_interval }}">
+    </label>
   </div>
-</div>
+  <button type="submit" class="btn btn--accent">保存</button>
+</form>
 
 <div class="page-header page-header--section">
   <div>

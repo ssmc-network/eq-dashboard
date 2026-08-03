@@ -4,7 +4,7 @@
   {"href": "/ui/settings", "icon": "⚙", "label": "システム設定", "also": ["/ui/api-sources", "/ui/tag-mappings", "/ui/standalone"]},
 ] %}
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" {% if request.cookies.get("theme") in ["light", "dark"] %}data-theme="{{ request.cookies.get('theme') }}"{% endif %}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -68,6 +68,55 @@
   }
 }
 
+/* 手動テーマ選択(システム設定)。prefers-color-schemeの自動判定を上書きする */
+:root[data-theme="dark"] {
+  --bg: #12161b;
+  --panel: #1a2028;
+  --panel-sunken: #161b22;
+  --border: #2b323c;
+  --text: #e8edf2;
+  --text-dim: #98a5b3;
+  --text-faint: #667180;
+  --accent: #e2984f;
+  --accent-strong: #f0ad6a;
+  --accent-soft: rgba(226, 152, 79, 0.14);
+  --accent-soft-strong: rgba(226, 152, 79, 0.22);
+
+  --status-running: #4cbb62;
+  --status-running-soft: rgba(76, 187, 98, 0.16);
+  --status-stopped: #8b96a3;
+  --status-stopped-soft: rgba(139, 150, 163, 0.16);
+  --status-alarm: #ef5b62;
+  --status-alarm-soft: rgba(239, 91, 98, 0.18);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="light"] {
+  --bg: #eef1f5;
+  --panel: #ffffff;
+  --panel-sunken: #f5f7fa;
+  --border: #dde3ea;
+  --text: #1a2128;
+  --text-dim: #66727e;
+  --text-faint: #99a3ad;
+  --accent: #c96a1b;
+  --accent-strong: #a4560f;
+  --accent-soft: rgba(201, 106, 27, 0.1);
+  --accent-soft-strong: rgba(201, 106, 27, 0.18);
+
+  --status-running: #2f9e44;
+  --status-running-soft: rgba(47, 158, 68, 0.12);
+  --status-stopped: #6b7785;
+  --status-stopped-soft: rgba(107, 119, 133, 0.12);
+  --status-alarm: #d9363e;
+  --status-alarm-soft: rgba(217, 54, 62, 0.12);
+
+  --shadow-sm: 0 1px 2px rgba(20, 24, 29, 0.06);
+  --shadow-md: 0 4px 16px rgba(20, 24, 29, 0.08);
+}
+
 /* ==========================================
    リセット / ベース
    ========================================== */
@@ -669,4 +718,36 @@ button {
 
 .eq-editable-box.is-selected .eq-editable-box__resize-handle {
   opacity: 1;
+}
+
+/* ==========================================
+   システム設定フォーム
+   ========================================== */
+.settings-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+
+.settings-field select,
+.settings-field input {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--panel-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
 }
