@@ -1,5 +1,5 @@
 # 本ファイルは単体での動作検証用のものです。
-# docker compose -f compose.yaml -f compose.production.yml up -d --buildで起動します。
+# docker compose -f compose.yaml -f compose.production.yaml up -d --buildで起動します。
 services:
   app:
     build:
