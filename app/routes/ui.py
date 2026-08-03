@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from services.status_service import LayoutNotFoundError, get_dashboard
+from services.status_service import FloorMap, LayoutNotFoundError, get_floor_map
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
@@ -23,13 +23,12 @@ async def dashboard_default() -> RedirectResponse:
 
 @router.get("/ui/dashboard/{layout_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
-    layout, boxes = _load_dashboard(layout_id)
+    floor_map = _load_floor_map(layout_id)
     return templates.TemplateResponse(
         request,
         "pages/dashboard.html",
         {
-            "layout": layout,
-            "boxes": boxes,
+            "floor_map": floor_map,
             "default_refresh_interval": DEFAULT_REFRESH_INTERVAL_SEC,
         },
     )
@@ -37,11 +36,11 @@ async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
 
 @router.get("/ui/dashboard/{layout_id}/items", response_class=HTMLResponse)
 async def dashboard_items(request: Request, layout_id: str) -> HTMLResponse:
-    layout, boxes = _load_dashboard(layout_id)
+    floor_map = _load_floor_map(layout_id)
     return templates.TemplateResponse(
         request,
         "partials/dashboard_items.html",
-        {"layout": layout, "boxes": boxes},
+        {"floor_map": floor_map},
     )
 
 
@@ -70,8 +69,8 @@ async def settings(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "pages/settings.html", {})
 
 
-def _load_dashboard(layout_id: str):
+def _load_floor_map(layout_id: str) -> FloorMap:
     try:
-        return get_dashboard(layout_id)
+        return get_floor_map(layout_id)
     except LayoutNotFoundError as exc:
         raise HTTPException(status_code=404, detail="layout not found") from exc

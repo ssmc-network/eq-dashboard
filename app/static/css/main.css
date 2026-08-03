@@ -422,44 +422,84 @@ button {
   position: relative;
 }
 
-.eq-box {
+/* フロア構造(壁・ゾーンなどの矩形図形。状態を持たない) */
+.floor-shape {
   position: absolute;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+
+.floor-shape__label {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-faint);
+}
+
+/* 装置ピン(座標に紐づく状態マーカー) */
+.eq-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 0.7rem 0.85rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--status-stopped);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.15s ease;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-.eq-box--running {
-  border-left-color: var(--status-running);
+.eq-marker__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--status-stopped);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--border);
 }
 
-.eq-box--stopped {
-  border-left-color: var(--status-stopped);
-}
-
-.eq-box--alarm {
-  border-left-color: var(--status-alarm);
-  box-shadow: 0 0 0 1px var(--status-alarm-soft), var(--shadow-sm);
-}
-
-.eq-box--unknown {
-  border-left-color: var(--text-faint);
-}
-
-.eq-box__label {
+.eq-marker__label {
+  font-size: 0.72rem;
   font-weight: 600;
-  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--panel);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
 }
 
-.eq-box__updated {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-faint);
+.eq-marker--running .eq-marker__dot {
+  background: var(--status-running);
+}
+
+.eq-marker--stopped .eq-marker__dot {
+  background: var(--status-stopped);
+}
+
+.eq-marker--alarm .eq-marker__dot {
+  background: var(--status-alarm);
+  animation: eq-marker-pulse 1.4s ease-in-out infinite;
+}
+
+.eq-marker--unknown .eq-marker__dot {
+  background: var(--text-faint);
+}
+
+@keyframes eq-marker-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--status-alarm-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--status-alarm-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-marker--alarm .eq-marker__dot {
+    animation: none;
+  }
 }
