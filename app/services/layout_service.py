@@ -17,3 +17,11 @@ def get_layout(layout_id: str) -> LayoutDefinition:
         return _provider.load_layout(layout_id)
     except LayoutFileNotFoundError as exc:
         raise LayoutNotFoundError(layout_id) from exc
+
+
+def layout_exists(layout_id: str) -> bool:
+    return any(meta.id == layout_id for meta in list_layouts())
+
+
+def save_layout(layout: LayoutDefinition) -> None:
+    _provider.save_layout(layout)

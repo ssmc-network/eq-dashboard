@@ -29,7 +29,7 @@ class DashboardBox:
 
 def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]:
     layout = get_layout(layout_id)
-    status = _provider.load_status(layout_id)
+    status = _provider.load_status()
     status_by_tag = {s.tag_id: s for s in status.statuses}
 
     boxes = []

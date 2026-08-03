@@ -1,7 +1,7 @@
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 
-from providers.json_status_provider import JsonStatusProvider, LayoutFileNotFoundError
+from providers.json_status_provider import JsonStatusProvider
 from services.import_export_service import validate_layout_json, validate_status_json
 from services.layout_service import LayoutNotFoundError, get_layout
 
@@ -23,14 +23,11 @@ async def export_layout(layout_id: str = Query(...)) -> JSONResponse:
 
 
 @router.get("/standalone/status/export")
-async def export_status(layout_id: str = Query(...)) -> JSONResponse:
-    try:
-        status = _provider.load_status(layout_id)
-    except LayoutFileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="status not found") from exc
+async def export_status() -> JSONResponse:
+    status = _provider.load_status()
     return JSONResponse(
         content=status.model_dump(by_alias=True, mode="json"),
-        headers={"Content-Disposition": f'attachment; filename="{layout_id}-status.json"'},
+        headers={"Content-Disposition": 'attachment; filename="status.json"'},
     )
 
 

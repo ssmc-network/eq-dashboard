@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 from schemas.layout import LayoutDefinition, LayoutMeta
 from services.import_export_service import validate_layout_json, validate_status_json
-from services.layout_service import LayoutNotFoundError, get_layout, list_layouts
+from services.layout_service import LayoutNotFoundError, get_layout, layout_exists, list_layouts, save_layout
 from services.status_service import get_dashboard
 
 router = APIRouter(tags=["ui"])
@@ -130,11 +130,40 @@ async def standalone(request: Request) -> HTMLResponse:
 
 @router.post("/ui/standalone/layout/import", response_class=HTMLResponse)
 async def standalone_import_layout(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
-    result = validate_layout_json(await file.read())
+    raw = await file.read()
+    result = validate_layout_json(raw)
+    exists = bool(result.ok and result.summary and layout_exists(result.summary["id"]))
     return templates.TemplateResponse(
         request,
         "partials/import_result.html",
-        {"result": result, "kind": "レイアウト", "filename": file.filename},
+        {
+            "result": result,
+            "kind": "レイアウト",
+            "filename": file.filename,
+            "raw_json": raw.decode("utf-8") if result.ok else None,
+            "exists": exists,
+            "confirm_url": "/ui/standalone/layout/import/confirm",
+        },
+    )
+
+
+@router.post("/ui/standalone/layout/import/confirm", response_class=HTMLResponse)
+async def standalone_import_layout_confirm(request: Request, raw_json: str = Form(...)) -> HTMLResponse:
+    result = validate_layout_json(raw_json.encode("utf-8"))
+    if not result.ok:
+        return templates.TemplateResponse(
+            request,
+            "partials/import_result.html",
+            {"result": result, "kind": "レイアウト", "filename": "(保存時の再検証)"},
+        )
+
+    layout = LayoutDefinition.model_validate(json.loads(raw_json))
+    was_existing = layout_exists(layout.layout.id)
+    save_layout(layout)
+    return templates.TemplateResponse(
+        request,
+        "partials/import_result.html",
+        {"saved": True, "layout": layout, "was_existing": was_existing},
     )
 
 

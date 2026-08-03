@@ -23,7 +23,7 @@
 <div class="standalone-grid">
   <div class="card">
     <h2>レイアウトJSON</h2>
-    <p class="standalone-section__desc">キャンバスの図形配置(schemaVersion / layout / items)。</p>
+    <p class="standalone-section__desc">キャンバスごとの図形配置(schemaVersion / layout / items)。</p>
 
     <h3>Export</h3>
     <form class="standalone-form" method="get" action="/api/standalone/layout/export" target="_blank">
@@ -35,7 +35,7 @@
       <button type="submit" class="btn">ダウンロード</button>
     </form>
 
-    <h3>Import(検証のみ)</h3>
+    <h3>Import</h3>
     <form class="standalone-form"
           hx-post="/ui/standalone/layout/import"
           hx-target="#layout-import-result"
@@ -49,16 +49,14 @@
 
   <div class="card">
     <h2>状態JSON</h2>
-    <p class="standalone-section__desc">装置の稼働状態スナップショット(schemaVersion / generatedAt / statuses)。</p>
+    <p class="standalone-section__desc">
+      全キャンバス共通の装置状態スナップショット(schemaVersion / generatedAt / statuses)。
+      キャンバスごとではなく、装置のタグID単位で1つに集約しています。
+    </p>
 
     <h3>Export</h3>
     <form class="standalone-form" method="get" action="/api/standalone/status/export" target="_blank">
-      <select name="layout_id">
-        {% for meta in available_layouts %}
-        <option value="{{ meta.id }}">{{ meta.name }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit" class="btn">ダウンロード</button>
+      <button type="submit" class="btn">status.jsonをダウンロード</button>
     </form>
 
     <h3>Import(検証のみ)</h3>

@@ -1,4 +1,10 @@
-{% if result.ok %}
+{% if saved %}
+<div class="import-result import-result--ok">
+  <p class="import-result__title">
+    ✓ キャンバス「{{ layout.layout.name }}」({{ layout.layout.id }})を{{ "上書き保存" if was_existing else "新規作成" }}しました。
+  </p>
+</div>
+{% elif result.ok %}
 <div class="import-result import-result--ok">
   <p class="import-result__title">✓ {{ filename }} は正しい{{ kind }}JSONです。</p>
   <dl class="import-result__summary">
@@ -9,6 +15,15 @@
     </div>
     {% endfor %}
   </dl>
+  {% if confirm_url %}
+  <form class="import-confirm" hx-post="{{ confirm_url }}" hx-target="closest .import-result" hx-swap="outerHTML">
+    <input type="hidden" name="raw_json" value="{{ raw_json }}">
+    <p class="import-confirm__notice">
+      id <code>{{ result.summary.id }}</code> は{{ "既存のキャンバスです。上書きされます。" if exists else "新規キャンバスとして作成されます。" }}
+    </p>
+    <button type="submit" class="btn btn--accent">この内容で保存</button>
+  </form>
+  {% endif %}
 </div>
 {% else %}
 <div class="import-result import-result--error">
