@@ -3,8 +3,8 @@
 {% block page_title %}ダッシュボード{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>{{ floor_map.layout.layout.name }}</h1>
-  <p>フロアマップ上の装置ピンで稼働状態を表示します(サンプルJSONデータ)。</p>
+  <h1>{{ layout.layout.name }}</h1>
+  <p>簡易図面上の装置を稼働状態の色で表示します(サンプルJSONデータ)。</p>
 </div>
 
 <div class="dashboard-toolbar">
@@ -23,7 +23,7 @@
 </div>
 
 <div class="dashboard-canvas-wrap">
-  <div id="dashboard-items" data-refresh-url="/ui/dashboard/{{ floor_map.layout.layout.id }}/items">
+  <div id="dashboard-items" data-refresh-url="/ui/dashboard/{{ layout.layout.id }}/items">
     {% include "partials/dashboard_items.html" %}
   </div>
 </div>

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from providers.json_status_provider import JsonStatusProvider
-from schemas.layout import LayoutDefinition, LayoutShape
+from schemas.layout import LayoutDefinition
 
 STATUS_LABELS = {
     "running": "稼働中",
@@ -14,28 +14,23 @@ _provider = JsonStatusProvider()
 
 
 @dataclass
-class DeviceMarker:
+class DashboardBox:
     id: str
     label: str
     x: int
     y: int
+    w: int
+    h: int
     status_value: str
     status_label: str
     updated_at: datetime
-
-
-@dataclass
-class FloorMap:
-    layout: LayoutDefinition
-    shapes: list[LayoutShape]
-    markers: list[DeviceMarker]
 
 
 class LayoutNotFoundError(Exception):
     pass
 
 
-def get_floor_map(layout_id: str) -> FloorMap:
+def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]:
     layout = _provider.load_layout()
     if layout.layout.id != layout_id:
         raise LayoutNotFoundError(layout_id)
@@ -43,21 +38,22 @@ def get_floor_map(layout_id: str) -> FloorMap:
     status = _provider.load_status()
     status_by_tag = {s.tag_id: s for s in status.statuses}
 
-    markers = []
-    for device in layout.devices:
-        matched = status_by_tag.get(device.tag_id)
+    boxes = []
+    for item in layout.items:
+        matched = status_by_tag.get(item.tag_id)
         value = matched.value if matched else "unknown"
         updated_at = matched.updated_at if matched else status.generated_at
-        markers.append(
-            DeviceMarker(
-                id=device.id,
-                label=device.label,
-                x=device.x,
-                y=device.y,
+        boxes.append(
+            DashboardBox(
+                id=item.id,
+                label=item.label,
+                x=item.x,
+                y=item.y,
+                w=item.w,
+                h=item.h,
                 status_value=value,
                 status_label=STATUS_LABELS.get(value, value),
                 updated_at=updated_at,
             )
         )
-
-    return FloorMap(layout=layout, shapes=layout.shapes, markers=markers)
+    return layout, boxes
