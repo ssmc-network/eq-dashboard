@@ -1,56 +1,56 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリで作業する Claude Code (claude.ai/code) へのガイダンスを提供します。
 
-## What this is
+## これは何か
 
-A FastAPI + HTMX dashboard that visualizes factory equipment run status on a floor-map-style canvas (装置の稼働状態可視化). Equipment shapes are drawn directly on a fixed white canvas and colored by status (running / stopped / alarm); layouts are editable via drag-and-resize. Multiple named canvases ("キャンバス", e.g. per floor or per room) are supported, switchable from the dashboard.
+工場設備の稼働状態をフロアマップ風のキャンバス上に可視化する、FastAPI + HTMX 製のダッシュボードです(装置の稼働状態可視化)。装置の図形は固定された白いキャンバス上に直接描画され、稼働状態(稼働中 / 停止中 / アラーム)に応じて色分けされます。レイアウトはドラッグ&リサイズで編集可能です。名前付きの複数キャンバス(「キャンバス」、例: 階層ごと・部屋ごと)に対応しており、ダッシュボードから切り替えられます。
 
-**Hard constraint: this app must never talk to a database directly.** Data comes either from local JSON files (current "offline/standalone" mode) or, in the future, from an external backend's REST API ("online" mode). If you're tempted to add a DB driver or ORM, stop — that always belongs on the other side of a REST API this app calls, not in this repo.
+**絶対的な制約: このアプリはDBに直接アクセスしてはいけません。** データはローカルのJSONファイル(現在の「オフライン/スタンドアロン」モード)、または将来的には外部バックエンドのREST API(「オンライン」モード)から取得します。DBドライバやORMを追加したくなったら、それは間違いです — それは必ず、このリポジトリが呼び出すREST APIの向こう側に置くべきものです。
 
-## Commands
+## コマンド
 
-All Python commands run from `app/` (it is the Poetry project root itself, not a package inside it — internal imports are bare, e.g. `from routes import api, ui`, no `app.` prefix).
+Pythonのコマンドはすべて `app/` から実行します(`app/` はPoetryプロジェクトのルートそのものであり、内部にネストしたパッケージではありません — 内部importは `from routes import api, ui` のように `app.` プレフィックスなしのベタ指定です)。
 
 ```bash
 cd app
-poetry install                 # install deps (add --with dev for lint/type/test tools)
-poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000   # dev server
+poetry install                 # 依存関係をインストール(lint/型チェック/テストツールも入れる場合は --with dev を追加)
+poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000   # 開発サーバー起動
 poetry run ruff check .        # lint
-poetry run ruff format .       # format
-poetry run mypy .              # type check
-poetry run pytest              # tests (no tests/ directory exists yet)
+poetry run ruff format .       # フォーマット
+poetry run mypy .              # 型チェック
+poetry run pytest              # テスト(現時点で tests/ ディレクトリは存在しません)
 ```
 
-Docker (multi-stage UBI9 build: `base` → `dependencies` → `dev`/`prd`):
+Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` → `dev`/`prd`):
 
 ```bash
-docker compose up -d                                            # dev target, uses compose.override.yaml
-docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd target, port 8888
+docker compose up -d                                            # devターゲット。compose.override.yaml を使用
+docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prdターゲット。ポート8888
 ```
 
-Compose files intentionally follow the Compose Specification naming (`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`) — no `docker-` prefix, no mixed extensions. Keep this naming if adding more override files.
+composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
 
-## Architecture
+## アーキテクチャ
 
-**Layering**: `routes/` → `services/` → `providers/` → `schemas/`.
+**レイヤー構成**: `routes/` → `services/` → `providers/` → `schemas/`。
 
-- `routes/ui.py` — HTMX/page routes, returns `Jinja2Templates` `HTMLResponse`s (both full pages and `partials/*` fragments for HTMX swaps).
-- `routes/api.py` — JSON API under the `/api` prefix: export endpoints (`GET /api/standalone/layout/export`, `GET /api/standalone/status/export`) and `POST /api/layouts/save` (used by the layout editor's direct save button).
-- `services/` — business logic (`layout_service`, `status_service`, `import_export_service`). No I/O of their own; they call into `providers/`.
-- `providers/json_status_provider.py` — the only place that touches the filesystem for layout/status data. `JsonStatusProvider` reads/writes `data/sample/layouts/<id>/layout.json` and the single global `data/sample/status.json`.
-- `schemas/` — Pydantic v2 models. JSON on disk/wire is camelCase; Python is snake_case, bridged via `Field(alias=...)` + `ConfigDict(populate_by_name=True)` (e.g. `tag_id: str = Field(alias="tagId")`).
+- `routes/ui.py` — HTMX/ページ用ルート。`Jinja2Templates` の `HTMLResponse` を返す(HTMXスワップ用の全体ページと `partials/*` の部分テンプレートの両方)。
+- `routes/api.py` — `/api` プレフィックス配下のJSON API。エクスポート用エンドポイント(`GET /api/standalone/layout/export`、`GET /api/standalone/status/export`)と `POST /api/layouts/save`(レイアウト編集画面の直接保存ボタンから使用)。
+- `services/` — ビジネスロジック(`layout_service`、`status_service`、`import_export_service`)。自身ではI/Oを行わず、`providers/` を呼び出す。
+- `providers/json_status_provider.py` — レイアウト/ステータスデータに関してファイルシステムに触れる唯一の場所。`JsonStatusProvider` が `data/sample/layouts/<id>/layout.json` と、単一グローバルな `data/sample/status.json` を読み書きする。
+- `schemas/` — Pydantic v2 モデル群。ディスク/通信上のJSONはcamelCase、Python側はsnake_caseで、`Field(alias=...)` + `ConfigDict(populate_by_name=True)` で橋渡ししている(例: `tag_id: str = Field(alias="tagId")`)。
 
-**Data model**: layouts are per-canvas (`layouts/<layout_id>/layout.json`: shapes, position/size, and each item's `tagId`). Status is a *single global* file (`status.json`) keyed by `tagId`, not per-canvas — `status_service.get_dashboard(layout_id)` loads the layout, loads the whole status snapshot, and joins them in memory by `tag_id`. This mirrors the eventual real backend's single `status_cache` design, so keep status global if you extend it.
+**データモデル**: レイアウトはキャンバスごと(`layouts/<layout_id>/layout.json`: 図形、位置/サイズ、各アイテムの `tagId`)。ステータスはキャンバスごとではなく、`tagId` をキーとした*単一のグローバルファイル*(`status.json`)— `status_service.get_dashboard(layout_id)` がレイアウトを読み込み、ステータススナップショット全体を読み込んで、メモリ上で `tag_id` により結合する。これは将来の実バックエンドが持つ単一の `status_cache` 設計を踏襲したものなので、拡張する際もステータスはグローバルのまま維持すること。
 
-**Persistence model (offline/standalone mode)**: writes go straight to those JSON files on local disk — no external volume, no DB. This is deliberate: the container is disposable (rebuilding it resets to the sample data), because durable storage is expected to live behind the future online backend, not in this app. Don't add volume mounts or a DB "to fix" that; it's the intended lifecycle. The two-step **validate → confirm-save** pattern (`POST .../import` returns a preview + a confirm form, `POST .../import/confirm` actually persists) is used for both layout and status imports on the Offline設定 (standalone) screen — follow it if adding another importable resource, matching by `id` for layouts (new vs. overwrite) since status has no per-record id.
+**永続化モデル(オフライン/スタンドアロンモード)**: 書き込みはローカルディスク上のこれらのJSONファイルへ直接行われる — 外部ボリュームもDBも使わない。これは意図的な設計: コンテナは使い捨て(再ビルドするとサンプルデータに戻る)であり、永続的なストレージは将来のオンラインバックエンド側に持たせる想定で、このアプリ自体には持たせない。これを「直す」ためにボリュームマウントやDBを追加しないこと — それが意図されたライフサイクル。Offline設定(スタンドアロン)画面のレイアウト・ステータスどちらのインポートにも、**検証 → 確認保存**の2段階パターン(`POST .../import` がプレビューと確認フォームを返し、`POST .../import/confirm` が実際に永続化する)を使用している — インポート可能なリソースを追加する場合もこのパターンに従うこと。レイアウトは(新規か上書きかの判定に)`id` で照合する。ステータスにはレコード単位のidが無いため、常に上書きとなる。
 
-**Online mode (not yet implemented)**: `repositories/*.py`, `providers/api_status_provider.py`, `schemas/api_config.py`, and `templates/partials/api_source_detail.html` are empty scaffold files reserved for the future REST-API-backed data source. `operation_mode` (`online`/`offline`, a cookie) already exists as a UI toggle, but nothing switches provider behavior on it yet — `JsonStatusProvider` is used unconditionally today. When implementing online mode, add an API-backed provider behind the same interface `JsonStatusProvider` exposes (`list_layouts`, `load_layout`, `save_layout`, `load_status`, `save_status`) and switch on `operation_mode` at the service layer — never let a route or template reach past `services/` into a provider directly.
+**オンラインモード(未実装)**: `repositories/*.py`、`providers/api_status_provider.py`、`schemas/api_config.py`、`templates/partials/api_source_detail.html` は、将来のREST APIバックエンドデータソース用に予約された空のスキャフォールドファイル。`operation_mode`(`online`/`offline`、Cookie)はUIのトグルとしてすでに存在するが、まだプロバイダの挙動をこれで切り替える実装はない — 現状は常に `JsonStatusProvider` が使われる。オンラインモードを実装する際は、`JsonStatusProvider` と同じインターフェース(`list_layouts`、`load_layout`、`save_layout`、`load_status`、`save_status`)を持つAPIベースのプロバイダを追加し、サービス層で `operation_mode` により切り替えること — ルートやテンプレートが `services/` を飛び越えてプロバイダに直接触れることは絶対にしないこと。
 
-**Settings**: persisted as cookies (`theme`, `operation_mode`, `default_layout_id`, `default_refresh_interval`), not a DB — validated server-side in `routes/ui.py` with fallback to defaults on any invalid/missing value.
+**設定**: `theme`、`operation_mode`、`default_layout_id`、`default_refresh_interval` はCookieとして永続化される(DBではない)— `routes/ui.py` でサーバー側検証を行い、値が不正/未設定の場合はデフォルトにフォールバックする。
 
-**Frontend**: server-rendered Jinja2 + HTMX, no build step. `static/js/htmx.min.js` is vendored (not a CDN) intentionally — this fits the factory-floor offline-network use case as well as this sandbox's blocked CDN access. Dashboard auto-refresh (`static/js/dashboard.js`) drives HTMX manually via a `setInterval` calling `htmx.ajax()`, rather than a declarative `hx-trigger` — a runtime-reconfigurable poll interval via `hx-trigger` was found unreliable in real-browser testing. The layout editor (`static/js/layout_editor.js`) implements drag/resize with raw pointer events, no drag library.
+**フロントエンド**: サーバーレンダリングのJinja2 + HTMX、ビルドステップなし。`static/js/htmx.min.js` は(CDNではなく)意図的にベンダリングされている — 工場フロアのオフラインネットワーク環境という利用実態にも、このサンドボックスでCDNアクセスがブロックされている事情にも合致するため。ダッシュボードの自動更新(`static/js/dashboard.js`)は、宣言的な `hx-trigger` ではなく `setInterval` から `htmx.ajax()` を直接呼び出す形でHTMXを手動駆動している — 実行時に再設定可能なポーリング間隔を `hx-trigger` で実現しようとしたところ、実ブラウザでの検証で不安定だったため。レイアウト編集画面(`static/js/layout_editor.js`)のドラッグ/リサイズは生のポインターイベントで実装しており、ドラッグ用ライブラリは使用していない。
 
-**Navigation**: sidebar (`templates/base.html`) has three top-level entries — Dashboard, レイアウト編集 (layout editor), システム設定 (settings hub). The settings hub links out to Online設定 (`/ui/api-sources`), タグマッピング (`/ui/tag-mappings`), and Offline設定 (`/ui/standalone`) — these are sub-pages of settings, not separate nav items, tracked via each nav item's `also: [...]` list for active-state highlighting (implemented with a Jinja `namespace()` since `{% set %}` doesn't persist across `{% for %}` iterations).
+**ナビゲーション**: サイドバー(`templates/base.html`)にはトップレベルの項目が3つ — ダッシュボード、レイアウト編集、システム設定(設定ハブ)。設定ハブからは Online設定(`/ui/api-sources`)、タグマッピング(`/ui/tag-mappings`)、Offline設定(`/ui/standalone`)へリンクしている — これらは設定のサブページであり独立したナビ項目ではないため、アクティブ状態のハイライト判定は各ナビ項目の `also: [...]` リストで管理している(`{% set %}` が `{% for %}` ループ内で値を保持しないため、Jinjaの `namespace()` を使って実装)。
 
-CSS (`static/css/main.css`) defines both themes via `@media (prefers-color-scheme: dark)` and `:root[data-theme="dark"/"light"]` overrides (manual toggle wins over OS preference), plus a separate `--diagram-*` token set for the equipment canvas — the canvas is always a fixed white "paper" background regardless of app theme, so its colors are not part of the light/dark token system.
+CSS(`static/css/main.css`)は `@media (prefers-color-scheme: dark)` と `:root[data-theme="dark"/"light"]` の両方でテーマを定義している(手動トグルがOS設定より優先)。加えて、装置キャンバス用に別途 `--diagram-*` トークン群を用意している — キャンバスはアプリのテーマに関わらず常に固定の白い「紙」背景であるため、その配色はライト/ダークのトークン体系には含めていない。
