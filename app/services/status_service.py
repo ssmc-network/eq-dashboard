@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from core.log_modules import log_application
 from providers.json_status_provider import JsonStatusProvider
 from schemas.layout import LayoutDefinition
 from schemas.status import StatusSnapshot
@@ -13,6 +14,7 @@ STATUS_LABELS = {
 }
 
 _provider = JsonStatusProvider()
+logger = log_application(__name__)
 
 
 @dataclass
@@ -56,3 +58,4 @@ def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]
 
 def save_status(status: StatusSnapshot) -> None:
     _provider.save_status(status)
+    logger.info("status saved", extra={"argument": {"status_count": len(status.statuses)}})
