@@ -1,0 +1,40 @@
+<div id="tag-mapping-table-wrap"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <table class="tag-mapping-table">
+    <thead>
+      <tr>
+        <th>tagId</th>
+        <th>APIフィールド</th>
+        <th>稼働中の値</th>
+        <th>停止中の値</th>
+        <th>アラームの値</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in mappings %}
+      <tr>
+        <td><code>{{ m.tag_id }}</code></td>
+        <td>{{ m.api_field }}</td>
+        <td>{{ m.running_value or "—" }}</td>
+        <td>{{ m.stopped_value or "—" }}</td>
+        <td>{{ m.alarm_value or "—" }}</td>
+        <td class="tag-mapping-table__actions">
+          <button type="button" class="btn btn--sm"
+                  hx-get="/ui/tag-mappings/{{ m.tag_id }}/edit"
+                  hx-target="#tag-mapping-form-wrap"
+                  hx-swap="innerHTML">編集</button>
+          <button type="button" class="btn btn--sm btn--danger"
+                  hx-delete="/ui/tag-mappings/{{ m.tag_id }}"
+                  hx-target="#tag-mapping-table-wrap"
+                  hx-swap="outerHTML"
+                  hx-confirm="「{{ m.tag_id }}」のマッピングを削除しますか?">削除</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="tag-mapping-table__empty">マッピングが登録されていません。</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

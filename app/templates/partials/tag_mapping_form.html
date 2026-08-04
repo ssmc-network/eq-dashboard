@@ -1,0 +1,39 @@
+<div id="tag-mapping-form-wrap">
+  <form class="tag-mapping-form"
+        hx-post="{{ ('/ui/tag-mappings/' + mapping.tag_id) if editing else '/ui/tag-mappings' }}"
+        hx-target="#tag-mapping-form-wrap"
+        hx-swap="innerHTML">
+    <h3>{{ "マッピングを編集" if editing else "マッピングを追加" }}</h3>
+    {% if error %}
+    <p class="tag-mapping-form__error">{{ error }}</p>
+    {% endif %}
+    <label>tagId
+      <input type="text" name="tag_id" value="{{ mapping.tag_id if mapping else '' }}"
+             placeholder="run_state_a" {% if editing %}readonly{% endif %} required>
+    </label>
+    <label>APIフィールド
+      <input type="text" name="api_field" value="{{ mapping.api_field if mapping else '' }}"
+             placeholder="line_a.transport_a.run_state" required>
+    </label>
+    <div class="tag-mapping-form__grid">
+      <label>稼働中の値
+        <input type="text" name="running_value" value="{{ mapping.running_value if mapping else '' }}" placeholder="1">
+      </label>
+      <label>停止中の値
+        <input type="text" name="stopped_value" value="{{ mapping.stopped_value if mapping else '' }}" placeholder="0">
+      </label>
+      <label>アラームの値
+        <input type="text" name="alarm_value" value="{{ mapping.alarm_value if mapping else '' }}" placeholder="9">
+      </label>
+    </div>
+    <div class="tag-mapping-form__actions">
+      <button type="submit" class="btn btn--accent">{{ "更新" if editing else "追加" }}</button>
+      {% if editing %}
+      <button type="button" class="btn"
+              hx-get="/ui/tag-mappings/new"
+              hx-target="#tag-mapping-form-wrap"
+              hx-swap="innerHTML">キャンセル</button>
+      {% endif %}
+    </div>
+  </form>
+</div>

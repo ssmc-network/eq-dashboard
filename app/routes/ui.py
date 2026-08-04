@@ -6,9 +6,19 @@ from fastapi.templating import Jinja2Templates
 
 from schemas.layout import LayoutDefinition, LayoutMeta
 from schemas.status import StatusSnapshot
+from schemas.tag_mapping import TagMapping
 from services.import_export_service import validate_layout_json, validate_status_json
 from services.layout_service import LayoutNotFoundError, get_layout, layout_exists, list_layouts, save_layout
 from services.status_service import get_dashboard, save_status
+from services.tag_mapping_service import (
+    TagMappingExistsError,
+    TagMappingNotFoundError,
+    create_tag_mapping,
+    delete_tag_mapping,
+    get_tag_mapping,
+    list_tag_mappings,
+    update_tag_mapping,
+)
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
@@ -114,7 +124,96 @@ async def api_sources(request: Request) -> HTMLResponse:
 
 @router.get("/ui/tag-mappings", response_class=HTMLResponse)
 async def tag_mappings(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "pages/tag_mappings.html", {})
+    return templates.TemplateResponse(
+        request,
+        "pages/tag_mappings.html",
+        {"mappings": list_tag_mappings(), "editing": False, "mapping": None},
+    )
+
+
+@router.get("/ui/tag-mappings/new", response_class=HTMLResponse)
+async def tag_mapping_new_form(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_form.html",
+        {"editing": False, "mapping": None},
+    )
+
+
+@router.get("/ui/tag-mappings/{tag_id}/edit", response_class=HTMLResponse)
+async def tag_mapping_edit_form(request: Request, tag_id: str) -> HTMLResponse:
+    mapping = get_tag_mapping(tag_id)
+    if mapping is None:
+        raise HTTPException(status_code=404, detail="tag mapping not found")
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_form.html",
+        {"editing": True, "mapping": mapping},
+    )
+
+
+@router.post("/ui/tag-mappings", response_class=HTMLResponse)
+async def tag_mapping_create(
+    request: Request,
+    tag_id: str = Form(...),
+    api_field: str = Form(...),
+    running_value: str = Form(""),
+    stopped_value: str = Form(""),
+    alarm_value: str = Form(""),
+) -> HTMLResponse:
+    mapping = TagMapping(
+        tagId=tag_id,
+        apiField=api_field,
+        runningValue=running_value,
+        stoppedValue=stopped_value,
+        alarmValue=alarm_value,
+    )
+    try:
+        create_tag_mapping(mapping)
+    except TagMappingExistsError:
+        return templates.TemplateResponse(
+            request,
+            "partials/tag_mapping_form.html",
+            {
+                "editing": False,
+                "mapping": mapping,
+                "error": f"tagId「{tag_id}」は既に登録されています。",
+            },
+        )
+    return _tag_mapping_saved_response(request)
+
+
+@router.post("/ui/tag-mappings/{tag_id}", response_class=HTMLResponse)
+async def tag_mapping_update(
+    request: Request,
+    tag_id: str,
+    api_field: str = Form(...),
+    running_value: str = Form(""),
+    stopped_value: str = Form(""),
+    alarm_value: str = Form(""),
+) -> HTMLResponse:
+    mapping = TagMapping(
+        tagId=tag_id,
+        apiField=api_field,
+        runningValue=running_value,
+        stoppedValue=stopped_value,
+        alarmValue=alarm_value,
+    )
+    try:
+        update_tag_mapping(tag_id, mapping)
+    except TagMappingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="tag mapping not found") from exc
+    return _tag_mapping_saved_response(request)
+
+
+@router.delete("/ui/tag-mappings/{tag_id}", response_class=HTMLResponse)
+async def tag_mapping_delete(request: Request, tag_id: str) -> HTMLResponse:
+    delete_tag_mapping(tag_id)
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_table.html",
+        {"mappings": list_tag_mappings(), "oob": False},
+    )
 
 
 @router.get("/ui/standalone", response_class=HTMLResponse)
@@ -256,6 +355,16 @@ async def save_settings(
         samesite="lax",
     )
     return response
+
+
+def _tag_mapping_saved_response(request: Request) -> HTMLResponse:
+    form_html = templates.env.get_template("partials/tag_mapping_form.html").render(
+        {"request": request, "editing": False, "mapping": None}
+    )
+    table_html = templates.env.get_template("partials/tag_mapping_table.html").render(
+        {"request": request, "mappings": list_tag_mappings(), "oob": True}
+    )
+    return HTMLResponse(content=form_html + table_html)
 
 
 def _load_dashboard(layout_id: str):
