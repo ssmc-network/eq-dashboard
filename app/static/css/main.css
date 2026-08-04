@@ -1032,3 +1032,88 @@ button {
   text-align: center;
   color: var(--text-dim);
 }
+
+/* ==========================================
+   Online設定
+   ========================================== */
+.api-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1rem;
+  max-width: 420px;
+}
+
+.api-config-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.api-config-form input[type="text"],
+.api-config-form input[type="password"] {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--panel-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.55rem;
+}
+
+.auth-type-field {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.auth-type-field legend {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  padding: 0 0.3rem;
+}
+
+.auth-type-field label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.api-config-form__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.api-test-result {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.api-test-result p {
+  margin: 0;
+}
+
+.api-test-result--ok {
+  background: var(--status-running-soft);
+  border-color: var(--status-running);
+}
+
+.api-test-result--error {
+  background: var(--status-alarm-soft);
+  border-color: var(--status-alarm);
+}

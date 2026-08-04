@@ -4,9 +4,12 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from repositories.api_config_repository import ApiConfigRepository
+from schemas.api_config import AUTH_TYPES, ApiConfig
 from schemas.layout import LayoutDefinition, LayoutMeta
 from schemas.status import StatusSnapshot
 from schemas.tag_mapping import TagMapping
+from services.api_test_service import test_connection
 from services.import_export_service import validate_layout_json, validate_status_json
 from services.layout_service import LayoutNotFoundError, get_layout, layout_exists, list_layouts, save_layout
 from services.status_service import get_dashboard, save_status
@@ -22,6 +25,7 @@ from services.tag_mapping_service import (
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
+_api_config_repo = ApiConfigRepository()
 
 DEFAULT_LAYOUT_ID = "line-a"
 DEFAULT_REFRESH_INTERVAL_SEC = 10
@@ -118,8 +122,47 @@ async def api_sources(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "pages/api_settings.html",
-        {"operation_mode": _get_operation_mode(request)},
+        {"operation_mode": _get_operation_mode(request), "config": _api_config_repo.load()},
     )
+
+
+@router.post("/ui/api-sources")
+async def save_api_config(
+    base_url: str = Form(""),
+    auth_type: str = Form("none"),
+    api_key_header: str = Form("X-API-Key"),
+    credential: str = Form(""),
+) -> RedirectResponse:
+    if auth_type not in AUTH_TYPES:
+        auth_type = "none"
+    config = ApiConfig(
+        baseUrl=base_url.strip(),
+        authType=auth_type,
+        apiKeyHeader=api_key_header.strip() or "X-API-Key",
+        credential=credential,
+    )
+    _api_config_repo.save(config)
+    return RedirectResponse(url="/ui/api-sources", status_code=303)
+
+
+@router.post("/ui/api-sources/test", response_class=HTMLResponse)
+async def test_api_config(
+    request: Request,
+    base_url: str = Form(""),
+    auth_type: str = Form("none"),
+    api_key_header: str = Form("X-API-Key"),
+    credential: str = Form(""),
+) -> HTMLResponse:
+    if auth_type not in AUTH_TYPES:
+        auth_type = "none"
+    config = ApiConfig(
+        baseUrl=base_url.strip(),
+        authType=auth_type,
+        apiKeyHeader=api_key_header.strip() or "X-API-Key",
+        credential=credential,
+    )
+    result = await test_connection(config)
+    return templates.TemplateResponse(request, "partials/api_test_result.html", {"result": result})
 
 
 @router.get("/ui/tag-mappings", response_class=HTMLResponse)
