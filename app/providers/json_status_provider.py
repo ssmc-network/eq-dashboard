@@ -3,10 +3,12 @@ from pathlib import Path
 
 from schemas.layout import LayoutDefinition, LayoutMeta
 from schemas.status import StatusSnapshot
+from schemas.tag_mapping import TagMappingSet
 
 SAMPLE_DIR = Path(__file__).resolve().parent.parent / "data" / "sample"
 LAYOUTS_DIR = SAMPLE_DIR / "layouts"
 STATUS_PATH = SAMPLE_DIR / "status.json"
+TAG_MAPPINGS_PATH = SAMPLE_DIR / "tag_mappings.json"
 
 
 class LayoutFileNotFoundError(Exception):
@@ -14,9 +16,15 @@ class LayoutFileNotFoundError(Exception):
 
 
 class JsonStatusProvider:
-    def __init__(self, layouts_dir: Path = LAYOUTS_DIR, status_path: Path = STATUS_PATH) -> None:
+    def __init__(
+        self,
+        layouts_dir: Path = LAYOUTS_DIR,
+        status_path: Path = STATUS_PATH,
+        tag_mappings_path: Path = TAG_MAPPINGS_PATH,
+    ) -> None:
         self._layouts_dir = layouts_dir
         self._status_path = status_path
+        self._tag_mappings_path = tag_mappings_path
 
     def list_layouts(self) -> list[LayoutMeta]:
         metas = []
@@ -45,6 +53,14 @@ class JsonStatusProvider:
     def save_status(self, status: StatusSnapshot) -> None:
         payload = json.dumps(status.model_dump(by_alias=True, mode="json"), ensure_ascii=False, indent=2)
         self._status_path.write_text(payload, encoding="utf-8")
+
+    def load_tag_mappings(self) -> TagMappingSet:
+        data = json.loads(self._tag_mappings_path.read_text(encoding="utf-8"))
+        return TagMappingSet.model_validate(data)
+
+    def save_tag_mappings(self, mapping_set: TagMappingSet) -> None:
+        payload = json.dumps(mapping_set.model_dump(by_alias=True), ensure_ascii=False, indent=2)
+        self._tag_mappings_path.write_text(payload, encoding="utf-8")
 
     def _layout_path(self, layout_id: str) -> Path:
         path = self._layouts_dir / layout_id / "layout.json"

@@ -32,19 +32,15 @@ target-version = "py310"
 line-length = 119
 
 [tool.ruff.lint]
-select = ["B", "D", "E", "F", "I", "N", "W", "C90", "PL", "RUF", "UP"]
-ignore = ["D104", "D210", "D415"]
+select = ["B", "E", "F", "I", "N", "W", "C90", "PL", "RUF", "UP"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 docstring-code-format = true
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form"]
 
 [tool.ruff.lint.pylint]
 max-args = 20

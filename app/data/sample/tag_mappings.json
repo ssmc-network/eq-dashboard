@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0",
+  "mappings": [
+    {
+      "tagId": "run_state_a",
+      "apiField": "line_a.transport_a.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "9"
+    },
+    {
+      "tagId": "run_state_b",
+      "apiField": "line_a.press_b.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "9"
+    },
+    {
+      "tagId": "run_state_c",
+      "apiField": "line_a.weld_robot_c.run_state",
+      "runningValue": "RUN",
+      "stoppedValue": "IDLE",
+      "alarmValue": "FAULT"
+    },
+    {
+      "tagId": "run_state_d",
+      "apiField": "line_a.inspection_d.run_state",
+      "runningValue": "RUN",
+      "stoppedValue": "IDLE",
+      "alarmValue": "FAULT"
+    },
+    {
+      "tagId": "run_state_e",
+      "apiField": "line_a.packer_e.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "9"
+    },
+    {
+      "tagId": "run_state_f",
+      "apiField": "line_a.transport_f.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "9"
+    },
+    {
+      "tagId": "run_state_x",
+      "apiField": "room_b.inspection_x.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "2"
+    },
+    {
+      "tagId": "run_state_y",
+      "apiField": "room_b.inspection_y.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "2"
+    },
+    {
+      "tagId": "run_state_z",
+      "apiField": "room_b.recorder_z.run_state",
+      "runningValue": "1",
+      "stoppedValue": "0",
+      "alarmValue": "2"
+    }
+  ]
+}
