@@ -5,9 +5,10 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from schemas.layout import LayoutDefinition, LayoutMeta
+from schemas.status import StatusSnapshot
 from services.import_export_service import validate_layout_json, validate_status_json
 from services.layout_service import LayoutNotFoundError, get_layout, layout_exists, list_layouts, save_layout
-from services.status_service import get_dashboard
+from services.status_service import get_dashboard, save_status
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
@@ -169,11 +170,37 @@ async def standalone_import_layout_confirm(request: Request, raw_json: str = For
 
 @router.post("/ui/standalone/status/import", response_class=HTMLResponse)
 async def standalone_import_status(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
-    result = validate_status_json(await file.read())
+    raw = await file.read()
+    result = validate_status_json(raw)
     return templates.TemplateResponse(
         request,
         "partials/import_result.html",
-        {"result": result, "kind": "状態", "filename": file.filename},
+        {
+            "result": result,
+            "kind": "状態",
+            "filename": file.filename,
+            "raw_json": raw.decode("utf-8") if result.ok else None,
+            "confirm_url": "/ui/standalone/status/import/confirm",
+        },
+    )
+
+
+@router.post("/ui/standalone/status/import/confirm", response_class=HTMLResponse)
+async def standalone_import_status_confirm(request: Request, raw_json: str = Form(...)) -> HTMLResponse:
+    result = validate_status_json(raw_json.encode("utf-8"))
+    if not result.ok:
+        return templates.TemplateResponse(
+            request,
+            "partials/import_result.html",
+            {"result": result, "kind": "状態", "filename": "(保存時の再検証)"},
+        )
+
+    status = StatusSnapshot.model_validate(json.loads(raw_json))
+    save_status(status)
+    return templates.TemplateResponse(
+        request,
+        "partials/import_result.html",
+        {"saved": True, "status": status},
     )
 
 

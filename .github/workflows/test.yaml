@@ -1,0 +1,38 @@
+name: Test on PR
+
+on:
+  pull_request:
+    branches:
+      - release/*
+
+jobs:
+  build_docker_image_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          target: dev
+          push: false
+          tags: test-image:latest
+          load: true
+
+      - name: Run ruff check
+        run: |
+          docker run --rm test-image:latest ruff check .
+
+      - name: Run ruff format
+        run: |
+          docker run --rm test-image:latest ruff format --check .
+
+      - name: Run tests
+        run: |
+          docker run --rm test-image:latest bash -c '[ -d tests ] && pytest || echo "no tests/ directory yet, skipping"'

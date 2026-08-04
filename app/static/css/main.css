@@ -867,6 +867,19 @@ button {
   font-weight: 600;
 }
 
+.editor-save-message {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.editor-save-message--ok {
+  color: var(--status-running);
+}
+
+.editor-save-message--error {
+  color: var(--status-alarm);
+}
+
 .import-result__summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

@@ -42,6 +42,10 @@ class JsonStatusProvider:
         data = json.loads(self._status_path.read_text(encoding="utf-8"))
         return StatusSnapshot.model_validate(data)
 
+    def save_status(self, status: StatusSnapshot) -> None:
+        payload = json.dumps(status.model_dump(by_alias=True, mode="json"), ensure_ascii=False, indent=2)
+        self._status_path.write_text(payload, encoding="utf-8")
+
     def _layout_path(self, layout_id: str) -> Path:
         path = self._layouts_dir / layout_id / "layout.json"
         if not path.exists():

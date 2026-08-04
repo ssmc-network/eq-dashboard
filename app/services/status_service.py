@@ -3,6 +3,7 @@ from datetime import datetime
 
 from providers.json_status_provider import JsonStatusProvider
 from schemas.layout import LayoutDefinition
+from schemas.status import StatusSnapshot
 from services.layout_service import get_layout
 
 STATUS_LABELS = {
@@ -51,3 +52,7 @@ def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]
             )
         )
     return layout, boxes
+
+
+def save_status(status: StatusSnapshot) -> None:
+    _provider.save_status(status)

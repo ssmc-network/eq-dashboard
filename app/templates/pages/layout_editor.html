@@ -5,7 +5,7 @@
 <div class="page-header">
   <div>
     <h1>{{ "新規キャンバス" if is_new else layout.layout.name + " を編集" }}</h1>
-    <p>装置図形をドラッグで配置・リサイズし、稼働状態のタグと紐づけます。編集内容はJSONとしてダウンロードできます。</p>
+    <p>装置図形をドラッグで配置・リサイズし、稼働状態のタグと紐づけます。編集内容はサーバーへ保存、またはJSONとしてダウンロードできます。</p>
   </div>
   <a class="btn-link" href="/ui/layouts">← キャンバス一覧へ</a>
 </div>
@@ -28,8 +28,10 @@
     <input type="number" id="meta-height" min="100" step="10" value="{{ layout.layout.height }}">
   </label>
   <button type="button" id="add-item-btn" class="btn">＋ 装置を追加</button>
-  <button type="button" id="download-btn" class="btn btn--accent">JSONをダウンロード</button>
+  <button type="button" id="save-btn" class="btn btn--accent">サーバーへ保存</button>
+  <button type="button" id="download-btn" class="btn">JSONをダウンロード</button>
   <span class="badge" id="editor-status">{{ layout.items|length }}件の装置</span>
+  <span class="editor-save-message" id="save-message"></span>
 </div>
 
 <div class="editor-layout">
