@@ -31,6 +31,22 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd�
 
 composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
 
+## ブランチ運用とCI/CD
+
+**ブランチモデル**: `main`(保護ブランチ、直pushは不可) / `release/<バージョン>`(例: `release/1.0.0`) / 開発ブランチ(`feature/...`、`claude/...`など)の3層。
+
+1. リリースするバージョンの `release/<バージョン>` ブランチを先に切る
+2. 開発ブランチを `release/<バージョン>` から切って作業し、完了したらPRで `release/<バージョン>` にマージする(これを繰り返す)
+3. `release/<バージョン>` が完成したらPRで `main` にマージする
+
+`release/*` へのPRと `main` へのPRとでCIの役割を分けている(後述)。
+
+**CI(`.github/workflows/`)**:
+
+- `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` が無ければスキップ)を実行する。ここでは本番用イメージのビルドやpushは行わない。
+- `build.yaml` — `main` へのPRが**マージされたとき**にのみ実行(`pull_request: types: [closed]` + `if: github.event.pull_request.merged == true`)。`main` は直pushできない保護ブランチなので、`push` イベントではなくPRマージイベントで発火させている。バージョン番号はマージ元ブランチ名(`github.event.pull_request.head.ref`、例: `release/1.0.0`)から `release/` を取り除いて取得し、`prd` ターゲットのイメージを `latest` とそのバージョンタグの両方でDocker Hubへpushしたあと、Trivyで脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない)。チェックアウトは `github.event.pull_request.merge_commit_sha` を明示指定している(`pull_request` イベントのデフォルトrefは一時的なテストマージ用refのため)。
+- Docker Hubへのpushには `secrets.DOCKER_TOKEN` を使用し、ユーザー名はGitHubのユーザー名(`github.actor`)と共通の前提(Docker HubとGitHubで同じユーザー名運用)。
+
 ## アーキテクチャ
 
 **レイヤー構成**: `routes/` → `services/` → `providers/` → `schemas/`。
