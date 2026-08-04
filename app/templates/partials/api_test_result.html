@@ -1,0 +1,3 @@
+<div class="api-test-result {{ 'api-test-result--ok' if result.ok else 'api-test-result--error' }}">
+  <p>{{ "✓" if result.ok else "✕" }} {{ result.message }}</p>
+</div>
