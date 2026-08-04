@@ -1,7 +1,9 @@
+from core.log_modules import log_application
 from providers.json_status_provider import JsonStatusProvider, LayoutFileNotFoundError
 from schemas.layout import LayoutDefinition, LayoutMeta
 
 _provider = JsonStatusProvider()
+logger = log_application(__name__)
 
 
 class LayoutNotFoundError(Exception):
@@ -25,3 +27,7 @@ def layout_exists(layout_id: str) -> bool:
 
 def save_layout(layout: LayoutDefinition) -> None:
     _provider.save_layout(layout)
+    logger.info(
+        "layout saved",
+        extra={"argument": {"layout_id": layout.layout.id, "item_count": len(layout.items)}},
+    )

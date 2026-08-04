@@ -64,5 +64,5 @@ FROM dependencies AS prd
 
 COPY --chown=1001:0 ./app /opt/app-root/src/project/app
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "log_config.yaml"]
 EXPOSE 8000

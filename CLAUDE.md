@@ -15,7 +15,7 @@ Pythonのコマンドはすべて `app/` から実行します(`app/` はPoetry�
 ```bash
 cd app
 poetry install                 # 依存関係をインストール(lint/型チェック/テストツールも入れる場合は --with dev を追加)
-poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000   # 開発サーバー起動
+poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000 --log-config log_config.yaml   # 開発サーバー起動
 poetry run ruff check .        # lint
 poetry run ruff format .       # フォーマット
 poetry run mypy .              # 型チェック
@@ -56,6 +56,9 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 - `services/` — ビジネスロジック(`layout_service`、`status_service`、`import_export_service`)。自身ではI/Oを行わず、`providers/` を呼び出す。
 - `providers/json_status_provider.py` — レイアウト/ステータスデータに関してファイルシステムに触れる唯一の場所。`JsonStatusProvider` が `data/sample/layouts/<id>/layout.json` と、単一グローバルな `data/sample/status.json` を読み書きする。
 - `schemas/` — Pydantic v2 モデル群。ディスク/通信上のJSONはcamelCase、Python側はsnake_caseで、`Field(alias=...)` + `ConfigDict(populate_by_name=True)` で橋渡ししている(例: `tag_id: str = Field(alias="tagId")`)。
+- `core/settings.py` / `core/log_modules.py` — ログ出力とその設定。`Settings`(`pydantic-settings`、`service`/`tz`/`loglevel`/`debug` を環境変数から読む。`tz`/`debug` は既存の compose の `TZ`/`DEBUG` 環境変数とそのまま対応)と、JSON形式のアプリケーションログを出すための `log_application(name)`。
+
+**ログ出力**: アプリケーションログは `core.log_modules.log_application(__name__)` で取得したロガーを使い、必ずJSON形式(`timestamp`/`level`/`message`/`service`/`tag`/`details`)で出力する。認証や複数アプリ構成、リクエスト単位のトレースIDといった概念は今のところ無いため、`user_id`/`app_name`/`trace_id` のようなフィールドは持たせていない(必要になったら追加すること)。追加のコンテキスト情報を残したい場合は `logger.info(msg, extra={"argument": {...}})` の `argument` に辞書で渡す(`layout_service.save_layout` などを参照)。**意図的にHTTPリクエスト/レスポンスの全件ログ出力ミドルウェアは実装していない** — Online設定のAPIキー/Bearerトークンのような機密情報がリクエストボディに含まれる可能性があり、ログへの機密情報混入を避けるため。`services/api_test_service.py` の接続テストのログも、`credential` は出力せず `base_url`/`auth_type`/結果のみを記録している。uvicorn自身のログ(起動メッセージ・アクセスログ)は `log_config.yaml` を `--log-config` に渡すことで同じJSON形式に揃えている。`HealthCheckFilter` が `/health` へのアクセスログを除外する。
 
 **データモデル**: レイアウトはキャンバスごと(`layouts/<layout_id>/layout.json`: 図形、位置/サイズ、各アイテムの `tagId`)。ステータスはキャンバスごとではなく、`tagId` をキーとした*単一のグローバルファイル*(`status.json`)— `status_service.get_dashboard(layout_id)` がレイアウトを読み込み、ステータススナップショット全体を読み込んで、メモリ上で `tag_id` により結合する。これは将来の実バックエンドが持つ単一の `status_cache` 設計を踏襲したものなので、拡張する際もステータスはグローバルのまま維持すること。
 
