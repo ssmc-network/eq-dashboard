@@ -5,13 +5,10 @@ import logging
 import sys
 import traceback
 import zoneinfo
-from contextvars import ContextVar
 from datetime import datetime
 from typing import Any
 
 from core.settings import settings
-
-context_trace_id: ContextVar[str | None] = ContextVar("context_trace_id", default=None)
 
 # uvicorn.accessのログ引数 (client_addr, method, full_path, http_version, status_code) のうち、
 # パスが入っているインデックス。ヘルスチェックのアクセスログを除外するために使う。
@@ -47,9 +44,6 @@ class LogApplicationJSONFormatter(TimeStampFormatter):
             "message": record.getMessage(),
             "service": settings.service,
             "tag": "application",
-            "trace_id": context_trace_id.get(),
-            "user_id": None,
-            "app_name": None,
             "details": details,
         }
         return json.dumps(log_data, ensure_ascii=False)

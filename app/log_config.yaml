@@ -3,7 +3,7 @@ disable_existing_loggers: false
 formatters:
   default:
     (): core.log_modules.TimeStampFormatter
-    format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "service": "uvicorn", "tag": "uvicorn", "trace_id": null, "user_id": null, "app_name": null, "details": {"function": "%(funcName)s", "argument": {}, "error_message": null, "stacktrace": null}}'
+    format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "service": "uvicorn", "tag": "uvicorn", "details": {"function": "%(funcName)s", "argument": {}, "error_message": null, "stacktrace": null}}'
 filters:
   health_check_filter:
     (): core.log_modules.HealthCheckFilter
