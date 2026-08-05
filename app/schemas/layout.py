@@ -6,20 +6,20 @@ class LayoutItem(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id: str
+    id: str = Field(min_length=1)
     label: str
-    x: int
-    y: int
-    w: int
-    h: int
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    w: int = Field(gt=0)
+    h: int = Field(gt=0)
     tag_id: str = Field(alias="tagId")
 
 
 class LayoutMeta(BaseModel):
-    id: str
-    name: str
-    width: int
-    height: int
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
 
 
 class LayoutDefinition(BaseModel):

@@ -27,6 +27,14 @@ def test_layouts_list_shows_known_layout(client: TestClient, sample_layout: dict
     assert "Line A" in response.text
 
 
+def test_layout_editor_new_renders_blank_form(client: TestClient, isolated_provider: IsolatedPaths) -> None:
+    """新規キャンバス用の空プレースホルダーがLayoutMetaのmin_length制約に引っかからないことの確認。"""
+    response = client.get("/ui/layouts/new")
+
+    assert response.status_code == 200
+    assert 'id="meta-id" value=""' in response.text
+
+
 def test_tag_mapping_create_then_appears_in_table(client: TestClient, isolated_provider: IsolatedPaths) -> None:
     response = client.post(
         "/ui/tag-mappings",
@@ -69,6 +77,19 @@ def test_tag_mapping_delete(client: TestClient, isolated_provider: IsolatedPaths
 
     assert response.status_code == 200
     assert "tag-a" not in response.text
+
+
+def test_layout_delete_removes_it_from_list(client: TestClient, sample_layout: dict) -> None:
+    response = client.request("DELETE", "/ui/layouts/line-a")
+
+    assert response.status_code == 200
+    assert "Line A" not in response.text
+
+
+def test_layout_delete_missing_is_noop(client: TestClient, isolated_provider: IsolatedPaths) -> None:
+    response = client.request("DELETE", "/ui/layouts/does-not-exist")
+
+    assert response.status_code == 200
 
 
 def test_api_sources_save_redirects_and_persists(

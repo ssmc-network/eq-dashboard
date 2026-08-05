@@ -396,6 +396,14 @@ button {
   line-height: 1.5;
 }
 
+.nav-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+}
+
 /* 状態ピル(将来のダッシュボード表示用) */
 .status-pill {
   display: inline-flex;
