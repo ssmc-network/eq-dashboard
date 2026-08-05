@@ -1125,3 +1125,39 @@ button {
   background: var(--status-alarm-soft);
   border-color: var(--status-alarm);
 }
+
+/* ==========================================
+   エラー表示
+   ========================================== */
+.error-page {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+}
+
+.error-page__code {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.error-page__message {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.inline-error {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--status-alarm);
+  background: var(--status-alarm-soft);
+  font-size: 0.82rem;
+  color: var(--status-alarm);
+}
+
+.inline-error p {
+  margin: 0;
+}
