@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 from schemas.layout import LayoutDefinition, LayoutMeta
@@ -45,6 +46,11 @@ class JsonStatusProvider:
         layout_dir.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(layout.model_dump(by_alias=True), ensure_ascii=False, indent=2)
         (layout_dir / "layout.json").write_text(payload, encoding="utf-8")
+
+    def delete_layout(self, layout_id: str) -> None:
+        layout_dir = self._layouts_dir / layout_id
+        if layout_dir.exists():
+            shutil.rmtree(layout_dir)
 
     def load_status(self) -> StatusSnapshot:
         data = json.loads(self._status_path.read_text(encoding="utf-8"))

@@ -9,18 +9,5 @@
   </div>
 </div>
 
-<div class="nav-grid">
-  {% for meta in layouts %}
-  <a class="nav-card" href="/ui/layouts/{{ meta.id }}/edit">
-    <span class="nav-card__icon">⬚</span>
-    <span class="nav-card__title">{{ meta.name }}</span>
-    <span class="nav-card__desc">{{ meta.width }} × {{ meta.height }}px / id: {{ meta.id }}</span>
-  </a>
-  {% endfor %}
-  <a class="nav-card" href="/ui/layouts/new">
-    <span class="nav-card__icon">＋</span>
-    <span class="nav-card__title">新規キャンバス</span>
-    <span class="nav-card__desc">空のキャンバスを新しく作成します。</span>
-  </a>
-</div>
+{% include "partials/layouts_grid.html" %}
 {% endblock %}

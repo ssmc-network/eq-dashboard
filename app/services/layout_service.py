@@ -31,3 +31,19 @@ def save_layout(layout: LayoutDefinition) -> None:
         "layout saved",
         extra={"argument": {"layout_id": layout.layout.id, "item_count": len(layout.items)}},
     )
+
+
+def rename_layout(original_id: str, layout: LayoutDefinition) -> None:
+    """既存キャンバスをidを変えて保存し、古いidのディレクトリを削除する(適切なリネーム)。"""
+    _provider.save_layout(layout)
+    if original_id != layout.layout.id:
+        _provider.delete_layout(original_id)
+    logger.info(
+        "layout renamed",
+        extra={"argument": {"original_id": original_id, "new_id": layout.layout.id}},
+    )
+
+
+def delete_layout(layout_id: str) -> None:
+    _provider.delete_layout(layout_id)
+    logger.info("layout deleted", extra={"argument": {"layout_id": layout_id}})

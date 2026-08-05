@@ -1,3 +1,6 @@
+import pytest
+from pydantic import ValidationError
+
 from schemas.api_config import ApiConfig
 from schemas.layout import LayoutDefinition
 from schemas.status import StatusSnapshot
@@ -65,3 +68,62 @@ def test_api_config_defaults() -> None:
     assert config.auth_type == "none"
     assert config.api_key_header == "X-API-Key"
     assert config.credential == ""
+
+
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_tag_mapping_rejects_blank_tag_id(blank: str) -> None:
+    with pytest.raises(ValidationError):
+        TagMapping(tagId=blank, apiField="field")
+
+
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_tag_mapping_rejects_blank_api_field(blank: str) -> None:
+    with pytest.raises(ValidationError):
+        TagMapping(tagId="tag-a", apiField=blank)
+
+
+def test_tag_mapping_strips_surrounding_whitespace() -> None:
+    mapping = TagMapping(tagId="  tag-a  ", apiField="  field  ")
+
+    assert mapping.tag_id == "tag-a"
+    assert mapping.api_field == "field"
+
+
+def test_layout_meta_rejects_blank_id_and_name() -> None:
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate(
+            {"schemaVersion": "1.0", "layout": {"id": "", "name": "x", "width": 10, "height": 10}, "items": []}
+        )
+
+
+@pytest.mark.parametrize(("field", "value"), [("width", 0), ("width", -1), ("height", 0), ("height", -1)])
+def test_layout_meta_rejects_non_positive_dimensions(field: str, value: int) -> None:
+    layout_meta = {"id": "x", "name": "x", "width": 10, "height": 10, field: value}
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate({"schemaVersion": "1.0", "layout": layout_meta, "items": []})
+
+
+@pytest.mark.parametrize(("field", "value"), [("w", 0), ("w", -1), ("h", 0), ("h", -1), ("x", -1), ("y", -1)])
+def test_layout_item_rejects_invalid_geometry(field: str, value: int) -> None:
+    item = {"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": "tag-a", field: value}
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+                "items": [item],
+            }
+        )
+
+
+def test_layout_item_allows_blank_tag_id() -> None:
+    """タグ未設定のまま装置を追加できる、既存のレイアウト編集フローを壊さないための確認。"""
+    layout = LayoutDefinition.model_validate(
+        {
+            "schemaVersion": "1.0",
+            "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+            "items": [{"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": ""}],
+        }
+    )
+
+    assert layout.items[0].tag_id == ""

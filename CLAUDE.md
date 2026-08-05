@@ -19,7 +19,7 @@ poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8000 --log-config log
 poetry run ruff check .        # lint
 poetry run ruff format .       # フォーマット
 poetry run mypy .              # 型チェック
-poetry run pytest              # テスト(現時点で tests/ ディレクトリは存在しません)
+poetry run pytest              # テスト
 ```
 
 Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` → `dev`/`prd`):
@@ -43,7 +43,7 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 **CI(`.github/workflows/`)**:
 
-- `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` が無ければスキップ)を実行する。ここでは本番用イメージのビルドやpushは行わない。
+- `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` ディレクトリが無い場合のみスキップするガードが入っている)を実行する。ここでは本番用イメージのビルドやpushは行わない。
 - `build.yaml` — `main` へのPRが**マージされたとき**にのみ実行(`pull_request: types: [closed]` + `if: github.event.pull_request.merged == true`)。`main` は直pushできない保護ブランチなので、`push` イベントではなくPRマージイベントで発火させている。バージョン番号はマージ元ブランチ名(`github.event.pull_request.head.ref`、例: `release/1.0.0`)から `release/` を取り除いて取得し、`prd` ターゲットのイメージを `latest` とそのバージョンタグの両方でDocker Hubへpushしたあと、Trivyで脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない)。チェックアウトは `github.event.pull_request.merge_commit_sha` を明示指定している(`pull_request` イベントのデフォルトrefは一時的なテストマージ用refのため)。
 - Docker Hubへのpushには `secrets.DOCKER_TOKEN` を使用し、ユーザー名はGitHubのユーザー名(`github.actor`)と共通の前提(Docker HubとGitHubで同じユーザー名運用)。
 
@@ -63,6 +63,10 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 **データモデル**: レイアウトはキャンバスごと(`layouts/<layout_id>/layout.json`: 図形、位置/サイズ、各アイテムの `tagId`)。ステータスはキャンバスごとではなく、`tagId` をキーとした*単一のグローバルファイル*(`status.json`)— `status_service.get_dashboard(layout_id)` がレイアウトを読み込み、ステータススナップショット全体を読み込んで、メモリ上で `tag_id` により結合する。これは将来の実バックエンドが持つ単一の `status_cache` 設計を踏襲したものなので、拡張する際もステータスはグローバルのまま維持すること。
 
 **永続化モデル(オフライン/スタンドアロンモード)**: 書き込みはローカルディスク上のこれらのJSONファイルへ直接行われる — 外部ボリュームもDBも使わない。これは意図的な設計: コンテナは使い捨て(再ビルドするとサンプルデータに戻る)であり、永続的なストレージは将来のオンラインバックエンド側に持たせる想定で、このアプリ自体には持たせない。これを「直す」ためにボリュームマウントやDBを追加しないこと — それが意図されたライフサイクル。Offline設定(スタンドアロン)画面のレイアウト・ステータスどちらのインポートにも、**検証 → 確認保存**の2段階パターン(`POST .../import` がプレビューと確認フォームを返し、`POST .../import/confirm` が実際に永続化する)を使用している — インポート可能なリソースを追加する場合もこのパターンに従うこと。レイアウトは(新規か上書きかの判定に)`id` で照合する。ステータスにはレコード単位のidが無いため、常に上書きとなる。
+
+**キャンバスの保存・リネーム・削除(`POST /api/layouts/save` / `layout_service`)**: レイアウト編集画面の「サーバーへ保存」ボタンは、Offline設定のインポートと同じく無警告上書きを避けるため確認フローを持つ — クライアントは編集開始時の元id(`originalId`、新規作成時は空文字)を毎回 `original_id` クエリパラメータとして送り、サーバー側は「送信されたidが元idと異なり、かつ既に別のキャンバスとして存在する」場合にのみ `409` + `needsConfirmation: true` を返す(元idのまま再保存する通常の編集操作では確認不要)。クライアントはこれを受けて `window.confirm()` を出し、承諾されたら `overwrite=true` を付けて再送する。id を変更して保存した場合は `layout_service.rename_layout()` が新idで保存した後に古いidのディレクトリを削除する(単純な新規作成ではなく、リネームとして扱う — 古いディレクトリが孤立して残ることを防ぐ)。キャンバス一覧(`/ui/layouts`)からの削除は `DELETE /ui/layouts/{layout_id}` で、`partials/layouts_grid.html` を再描画する(タグマッピングの削除と同じ hx-delete + hx-confirm パターン)。
+
+**入力値の検証(`schemas/layout.py` / `schemas/tag_mapping.py`)**: `LayoutMeta.id`/`name` と `TagMapping.tag_id`/`api_field` は空文字(および空白のみ)を拒否する — 特にタグマッピングは `field_validator` で strip 後に空なら `ValueError` を送出する。`LayoutMeta.width`/`height` と `LayoutItem.w`/`h` は正の値のみ、`x`/`y` は0以上のみ許可する。一方 `LayoutItem.tag_id`/`label` は意図的に制約していない — キャンバス編集中にタグを後から割り当てる/ラベル未入力のまま置くという正当な中間状態があるため。この非対称性を「漏れ」と誤解してtag_idにも制約を追加しないこと。**新規キャンバス作成画面(`GET /ui/layouts/new`)の空プレースホルダーは `LayoutMeta.model_construct(id="", name="", ...)` で作る**(通常の `LayoutMeta(...)` ではバリデーションに引っかかって500になる) — 空文字を許すプレースホルダーが必要な箇所ではこのパターンを使うこと。
 
 **タグマッピング**: `/ui/tag-mappings` は、外部APIのレスポンス項目名(将来のオンラインモード用)と内部 `tagId`、稼働中/停止中/アラームそれぞれに対応する生値を紐づけるCRUD画面。データは `data/sample/tag_mappings.json`(グローバル1ファイル、`tagId` で一意)。`services/tag_mapping_service.py` が `JsonStatusProvider` の `load_tag_mappings`/`save_tag_mappings` を呼ぶ。一覧・編集・削除は素のHTMX(クライアントJSなし)で実装している点に注意 — 編集ボタンは `hx-get` でフォームへ読み込み、作成/更新は「フォームをリセットした状態」を主レスポンス、テーブル全体の再描画を `hx-swap-oob` によるout-of-band swapとして同じレスポンスに同梱し1往復で両方を同期している。削除は `hx-delete` + `hx-confirm`。このマッピング自体は現時点でどこからも読み取られていない(オンラインモードの実データ取得が未実装のため) — 将来の `ApiStatusProvider` が生値→内部ステータスの変換に使う想定。
 

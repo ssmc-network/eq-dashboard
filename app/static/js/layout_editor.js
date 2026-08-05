@@ -12,6 +12,7 @@
     height: initial.layout.height || 420,
     items: (initial.items || []).map((it) => ({ ...it })),
   };
+  let originalId = initial.layout.id || "";
   let nextSeq = state.items.length + 1;
   let selectedId = null;
 
@@ -231,6 +232,18 @@
     URL.revokeObjectURL(url);
   });
 
+  async function postSave(overwrite) {
+    const params = new URLSearchParams({ original_id: originalId });
+    if (overwrite) params.set("overwrite", "true");
+    const res = await fetch(`/api/layouts/save?${params}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildPayload()),
+    });
+    const data = await res.json();
+    return { res, data };
+  }
+
   saveBtn.addEventListener("click", async () => {
     if (!state.id || !state.name) {
       window.alert("ID と 名前 を入力してください。");
@@ -242,15 +255,23 @@
     saveMessage.className = "editor-save-message";
     saveMessage.textContent = "";
     try {
-      const res = await fetch("/api/layouts/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildPayload()),
-      });
-      const data = await res.json();
+      let { res, data } = await postSave(false);
+
+      if (res.status === 409 && data.needsConfirmation) {
+        const confirmed = window.confirm(
+          `id「${state.id}」は既存のキャンバス「${data.existingName}」です。上書きしますか?`
+        );
+        if (!confirmed) {
+          saveMessage.textContent = "保存をキャンセルしました。";
+          return;
+        }
+        ({ res, data } = await postSave(true));
+      }
+
       if (res.ok && data.ok) {
         saveMessage.textContent = `✓ サーバーに保存しました(${data.id})`;
         saveMessage.classList.add("editor-save-message--ok");
+        originalId = data.id;
       } else {
         saveMessage.textContent = `✕ 保存に失敗しました: ${(data.errors || []).join(" / ")}`;
         saveMessage.classList.add("editor-save-message--error");
