@@ -46,6 +46,14 @@ def test_tag_mapping_create_then_appears_in_table(client: TestClient, isolated_p
     assert "line_a.pump.run_state" in response.text
 
 
+def test_tag_mapping_table_shows_usage_for_used_and_unused_tags(client: TestClient, sample_layout: dict) -> None:
+    client.post("/ui/tag-mappings", data={"tag_id": "tag-a", "api_field": "field-a"})
+    response = client.post("/ui/tag-mappings", data={"tag_id": "tag-unused", "api_field": "field-b"})
+
+    assert "Line A / Pump" in response.text
+    assert "未使用" in response.text
+
+
 def test_tag_mapping_create_duplicate_shows_error(client: TestClient, isolated_provider: IsolatedPaths) -> None:
     client.post("/ui/tag-mappings", data={"tag_id": "tag-a", "api_field": "field-1"})
 

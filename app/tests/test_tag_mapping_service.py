@@ -1,12 +1,15 @@
 import pytest
 
+from schemas.layout import LayoutDefinition
 from schemas.tag_mapping import TagMapping
+from services.layout_service import save_layout
 from services.tag_mapping_service import (
     TagMappingExistsError,
     TagMappingNotFoundError,
     create_tag_mapping,
     delete_tag_mapping,
     get_tag_mapping,
+    get_tag_usage,
     list_tag_mappings,
     update_tag_mapping,
 )
@@ -65,3 +68,37 @@ def test_delete_tag_mapping_missing_is_noop(isolated_provider: IsolatedPaths) ->
     delete_tag_mapping("does-not-exist")
 
     assert list_tag_mappings() == []
+
+
+def test_get_tag_usage_empty_when_no_layouts(isolated_provider: IsolatedPaths) -> None:
+    assert get_tag_usage() == {}
+
+
+def test_get_tag_usage_reports_layout_and_item(isolated_provider: IsolatedPaths) -> None:
+    save_layout(
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+                "items": [{"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": "tag-a"}],
+            }
+        )
+    )
+
+    usage = get_tag_usage()
+
+    assert usage == {"tag-a": ["Line A / Pump"]}
+
+
+def test_get_tag_usage_ignores_blank_tag_id(isolated_provider: IsolatedPaths) -> None:
+    save_layout(
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+                "items": [{"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": ""}],
+            }
+        )
+    )
+
+    assert get_tag_usage() == {}

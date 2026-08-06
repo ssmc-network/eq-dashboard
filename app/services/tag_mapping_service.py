@@ -1,6 +1,7 @@
 from core.log_modules import log_application
 from providers.json_status_provider import JsonStatusProvider
 from schemas.tag_mapping import TagMapping, TagMappingSet
+from services.layout_service import get_layout, list_layouts
 
 _provider = JsonStatusProvider()
 logger = log_application(__name__)
@@ -22,6 +23,18 @@ def list_tag_mappings() -> list[TagMapping]:
 
 def get_tag_mapping(tag_id: str) -> TagMapping | None:
     return next((m for m in list_tag_mappings() if m.tag_id == tag_id), None)
+
+
+def get_tag_usage() -> dict[str, list[str]]:
+    """tagId -> このtagIdを使っている「キャンバス名 / 装置ラベル」のリスト。"""
+    usage: dict[str, list[str]] = {}
+    for meta in list_layouts():
+        layout = get_layout(meta.id)
+        for item in layout.items:
+            if not item.tag_id:
+                continue
+            usage.setdefault(item.tag_id, []).append(f"{layout.layout.name} / {item.label}")
+    return usage
 
 
 def create_tag_mapping(mapping: TagMapping) -> None:
