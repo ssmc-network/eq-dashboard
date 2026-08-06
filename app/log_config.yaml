@@ -1,0 +1,24 @@
+version: 1
+disable_existing_loggers: false
+formatters:
+  default:
+    (): core.log_modules.TimeStampFormatter
+    format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "service": "uvicorn", "tag": "uvicorn", "details": {"function": "%(funcName)s", "argument": {}, "error_message": null, "stacktrace": null}}'
+filters:
+  health_check_filter:
+    (): core.log_modules.HealthCheckFilter
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: default
+loggers:
+  uvicorn:
+    handlers:
+      - console
+    level: INFO
+  uvicorn.access:
+    handlers:
+      - console
+    level: INFO
+    propagate: false
+    filters: [health_check_filter]

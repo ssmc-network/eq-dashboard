@@ -1,0 +1,6 @@
+{
+  "baseUrl": "",
+  "authType": "none",
+  "apiKeyHeader": "X-API-Key",
+  "credential": ""
+}

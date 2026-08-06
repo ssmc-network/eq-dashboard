@@ -3,15 +3,38 @@ import json
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 
+from repositories.api_config_repository import ApiConfigRepository
+from schemas.api_config import AUTH_TYPES, ApiConfig
 from schemas.layout import LayoutDefinition, LayoutMeta
 from schemas.status import StatusSnapshot
+from schemas.tag_mapping import TagMapping
+from services.api_test_service import test_connection
 from services.import_export_service import validate_layout_json, validate_status_json
-from services.layout_service import LayoutNotFoundError, get_layout, layout_exists, list_layouts, save_layout
+from services.layout_service import (
+    LayoutNotFoundError,
+    delete_layout,
+    get_layout,
+    layout_exists,
+    list_layouts,
+    save_layout,
+)
 from services.status_service import get_dashboard, save_status
+from services.tag_mapping_service import (
+    TagMappingExistsError,
+    TagMappingNotFoundError,
+    create_tag_mapping,
+    delete_tag_mapping,
+    get_tag_mapping,
+    get_tag_usage,
+    list_tag_mappings,
+    update_tag_mapping,
+)
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
+_api_config_repo = ApiConfigRepository()
 
 DEFAULT_LAYOUT_ID = "line-a"
 DEFAULT_REFRESH_INTERVAL_SEC = 10
@@ -68,11 +91,21 @@ async def layouts_list(request: Request) -> HTMLResponse:
     )
 
 
+@router.delete("/ui/layouts/{layout_id}", response_class=HTMLResponse)
+async def layout_delete(request: Request, layout_id: str) -> HTMLResponse:
+    delete_layout(layout_id)
+    return templates.TemplateResponse(
+        request,
+        "partials/layouts_grid.html",
+        {"layouts": list_layouts()},
+    )
+
+
 @router.get("/ui/layouts/new", response_class=HTMLResponse)
 async def layout_editor_new(request: Request) -> HTMLResponse:
     blank = LayoutDefinition(
         schemaVersion="1.0",
-        layout=LayoutMeta(id="", name="", width=900, height=420),
+        layout=LayoutMeta.model_construct(id="", name="", width=900, height=420),
         items=[],
     )
     return templates.TemplateResponse(
@@ -108,13 +141,153 @@ async def api_sources(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "pages/api_settings.html",
-        {"operation_mode": _get_operation_mode(request)},
+        {"operation_mode": _get_operation_mode(request), "config": _api_config_repo.load()},
     )
+
+
+@router.post("/ui/api-sources")
+async def save_api_config(
+    base_url: str = Form(""),
+    auth_type: str = Form("none"),
+    api_key_header: str = Form("X-API-Key"),
+    credential: str = Form(""),
+) -> RedirectResponse:
+    if auth_type not in AUTH_TYPES:
+        auth_type = "none"
+    config = ApiConfig(
+        baseUrl=base_url.strip(),
+        authType=auth_type,
+        apiKeyHeader=api_key_header.strip() or "X-API-Key",
+        credential=credential,
+    )
+    _api_config_repo.save(config)
+    return RedirectResponse(url="/ui/api-sources", status_code=303)
+
+
+@router.post("/ui/api-sources/test", response_class=HTMLResponse)
+async def test_api_config(
+    request: Request,
+    base_url: str = Form(""),
+    auth_type: str = Form("none"),
+    api_key_header: str = Form("X-API-Key"),
+    credential: str = Form(""),
+) -> HTMLResponse:
+    if auth_type not in AUTH_TYPES:
+        auth_type = "none"
+    config = ApiConfig(
+        baseUrl=base_url.strip(),
+        authType=auth_type,
+        apiKeyHeader=api_key_header.strip() or "X-API-Key",
+        credential=credential,
+    )
+    result = await test_connection(config)
+    return templates.TemplateResponse(request, "partials/api_test_result.html", {"result": result})
 
 
 @router.get("/ui/tag-mappings", response_class=HTMLResponse)
 async def tag_mappings(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "pages/tag_mappings.html", {})
+    return templates.TemplateResponse(
+        request,
+        "pages/tag_mappings.html",
+        {"mappings": list_tag_mappings(), "editing": False, "mapping": None, "tag_usage": get_tag_usage()},
+    )
+
+
+@router.get("/ui/tag-mappings/new", response_class=HTMLResponse)
+async def tag_mapping_new_form(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_form.html",
+        {"editing": False, "mapping": None},
+    )
+
+
+@router.get("/ui/tag-mappings/{tag_id}/edit", response_class=HTMLResponse)
+async def tag_mapping_edit_form(request: Request, tag_id: str) -> HTMLResponse:
+    mapping = get_tag_mapping(tag_id)
+    if mapping is None:
+        raise HTTPException(status_code=404, detail="tag mapping not found")
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_form.html",
+        {"editing": True, "mapping": mapping},
+    )
+
+
+@router.post("/ui/tag-mappings", response_class=HTMLResponse)
+async def tag_mapping_create(
+    request: Request,
+    tag_id: str = Form(...),
+    api_field: str = Form(...),
+    running_value: str = Form(""),
+    stopped_value: str = Form(""),
+    alarm_value: str = Form(""),
+) -> HTMLResponse:
+    try:
+        mapping = TagMapping(
+            tagId=tag_id,
+            apiField=api_field,
+            runningValue=running_value,
+            stoppedValue=stopped_value,
+            alarmValue=alarm_value,
+        )
+    except ValidationError:
+        return _tag_mapping_blank_value_response(
+            request, False, tag_id, api_field, running_value, stopped_value, alarm_value
+        )
+
+    try:
+        create_tag_mapping(mapping)
+    except TagMappingExistsError:
+        return templates.TemplateResponse(
+            request,
+            "partials/tag_mapping_form.html",
+            {
+                "editing": False,
+                "mapping": mapping,
+                "error": f"tagId「{tag_id}」は既に登録されています。",
+            },
+        )
+    return _tag_mapping_saved_response(request)
+
+
+@router.post("/ui/tag-mappings/{tag_id}", response_class=HTMLResponse)
+async def tag_mapping_update(
+    request: Request,
+    tag_id: str,
+    api_field: str = Form(...),
+    running_value: str = Form(""),
+    stopped_value: str = Form(""),
+    alarm_value: str = Form(""),
+) -> HTMLResponse:
+    try:
+        mapping = TagMapping(
+            tagId=tag_id,
+            apiField=api_field,
+            runningValue=running_value,
+            stoppedValue=stopped_value,
+            alarmValue=alarm_value,
+        )
+    except ValidationError:
+        return _tag_mapping_blank_value_response(
+            request, True, tag_id, api_field, running_value, stopped_value, alarm_value
+        )
+
+    try:
+        update_tag_mapping(tag_id, mapping)
+    except TagMappingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="tag mapping not found") from exc
+    return _tag_mapping_saved_response(request)
+
+
+@router.delete("/ui/tag-mappings/{tag_id}", response_class=HTMLResponse)
+async def tag_mapping_delete(request: Request, tag_id: str) -> HTMLResponse:
+    delete_tag_mapping(tag_id)
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_table.html",
+        {"mappings": list_tag_mappings(), "oob": False, "tag_usage": get_tag_usage()},
+    )
 
 
 @router.get("/ui/standalone", response_class=HTMLResponse)
@@ -256,6 +429,43 @@ async def save_settings(
         samesite="lax",
     )
     return response
+
+
+def _tag_mapping_saved_response(request: Request) -> HTMLResponse:
+    form_html = templates.env.get_template("partials/tag_mapping_form.html").render(
+        {"request": request, "editing": False, "mapping": None}
+    )
+    table_html = templates.env.get_template("partials/tag_mapping_table.html").render(
+        {"request": request, "mappings": list_tag_mappings(), "oob": True, "tag_usage": get_tag_usage()}
+    )
+    return HTMLResponse(content=form_html + table_html)
+
+
+def _tag_mapping_blank_value_response(
+    request: Request,
+    editing: bool,
+    tag_id: str,
+    api_field: str,
+    running_value: str,
+    stopped_value: str,
+    alarm_value: str,
+) -> HTMLResponse:
+    raw_mapping = TagMapping.model_construct(
+        tag_id=tag_id,
+        api_field=api_field,
+        running_value=running_value,
+        stopped_value=stopped_value,
+        alarm_value=alarm_value,
+    )
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_form.html",
+        {
+            "editing": editing,
+            "mapping": raw_mapping,
+            "error": "tagIdとAPIフィールドは必須です(空白のみは不可)。",
+        },
+    )
 
 
 def _load_dashboard(layout_id: str):

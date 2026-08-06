@@ -1,0 +1,21 @@
+<div class="nav-grid" id="layouts-grid">
+  {% for meta in layouts %}
+  <div class="nav-card nav-card--with-actions">
+    <a class="nav-card__link" href="/ui/layouts/{{ meta.id }}/edit">
+      <span class="nav-card__icon">⬚</span>
+      <span class="nav-card__title">{{ meta.name }}</span>
+      <span class="nav-card__desc">{{ meta.width }} × {{ meta.height }}px / id: {{ meta.id }}</span>
+    </a>
+    <button type="button" class="btn btn--sm btn--danger nav-card__delete"
+            hx-delete="/ui/layouts/{{ meta.id }}"
+            hx-target="#layouts-grid"
+            hx-swap="outerHTML"
+            hx-confirm="キャンバス「{{ meta.name }}」を削除しますか?この操作は取り消せません。">削除</button>
+  </div>
+  {% endfor %}
+  <a class="nav-card" href="/ui/layouts/new">
+    <span class="nav-card__icon">＋</span>
+    <span class="nav-card__title">新規キャンバス</span>
+    <span class="nav-card__desc">空のキャンバスを新しく作成します。</span>
+  </a>
+</div>
