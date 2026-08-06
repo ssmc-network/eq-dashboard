@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build_docker_image_and_push:
     if: github.event.pull_request.merged == true
