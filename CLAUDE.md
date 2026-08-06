@@ -44,7 +44,7 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 **CI(`.github/workflows/`)**:
 
 - `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` ディレクトリが無い場合のみスキップするガードが入っている)を実行する。ここでは本番用イメージのビルドやpushは行わない。
-- `build.yaml` — `main` へのPRが**マージされたとき**にのみ実行(`pull_request: types: [closed]` + `if: github.event.pull_request.merged == true`)。`main` は直pushできない保護ブランチなので、`push` イベントではなくPRマージイベントで発火させている。バージョン番号はマージ元ブランチ名(`github.event.pull_request.head.ref`、例: `release/1.0.0`)から `release/` を取り除いて取得し、`prd` ターゲットのイメージを `latest` とそのバージョンタグの両方でDocker Hubへpushしたあと、Trivyで脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない)。チェックアウトは `github.event.pull_request.merge_commit_sha` を明示指定している(`pull_request` イベントのデフォルトrefは一時的なテストマージ用refのため)。
+- `build.yaml` — `main` への **`push`** イベントで実行する(`on: push: branches: [main]`)。`main` は直pushできない保護ブランチだが、PRをGitHubのマージボタンでマージするとGitHub自身が `main` へマージコミットをpushする形になるため、`push` イベントは通常どおり発火する(保護ブランチが防いでいるのは「人間/CIによる直接push」だけで、マージに伴う内部的なpushは防いでいない)。以前は `pull_request: types: [closed]` + `if: github.event.pull_request.merged == true` を使っていたが、`pull_request` イベントで発行されるトークンは `permissions` やリポジトリのWorkflow permissions設定を`Read and write`にしても `actions/cache` の書き込み(`cache write denied: token has no writable scopes`)ができないことが判明し、`push` トリガーに変更した。バージョン番号はマージコミットのメッセージ(GitHubが自動生成する `Merge pull request #N from <owner>/release/<version>` という文言、`github.event.head_commit.message`)から正規表現で抽出する(マージ戦略を「Create a merge commit」以外に変更した場合はこの抽出が壊れる点に注意)。`prd` ターゲットのイメージを `latest` とそのバージョンタグの両方でDocker Hubへpushしたあと、Trivyで脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない)。
 - Docker Hubへのpushには `secrets.DOCKER_TOKEN` を使用し、ユーザー名はGitHubのユーザー名(`github.actor`)と共通の前提(Docker HubとGitHubで同じユーザー名運用)。
 
 ## アーキテクチャ
