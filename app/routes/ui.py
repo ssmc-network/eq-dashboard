@@ -27,6 +27,7 @@ from services.tag_mapping_service import (
     create_tag_mapping,
     delete_tag_mapping,
     get_tag_mapping,
+    get_tag_usage,
     list_tag_mappings,
     update_tag_mapping,
 )
@@ -188,7 +189,7 @@ async def tag_mappings(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "pages/tag_mappings.html",
-        {"mappings": list_tag_mappings(), "editing": False, "mapping": None},
+        {"mappings": list_tag_mappings(), "editing": False, "mapping": None, "tag_usage": get_tag_usage()},
     )
 
 
@@ -285,7 +286,7 @@ async def tag_mapping_delete(request: Request, tag_id: str) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "partials/tag_mapping_table.html",
-        {"mappings": list_tag_mappings(), "oob": False},
+        {"mappings": list_tag_mappings(), "oob": False, "tag_usage": get_tag_usage()},
     )
 
 
@@ -435,7 +436,7 @@ def _tag_mapping_saved_response(request: Request) -> HTMLResponse:
         {"request": request, "editing": False, "mapping": None}
     )
     table_html = templates.env.get_template("partials/tag_mapping_table.html").render(
-        {"request": request, "mappings": list_tag_mappings(), "oob": True}
+        {"request": request, "mappings": list_tag_mappings(), "oob": True, "tag_usage": get_tag_usage()}
     )
     return HTMLResponse(content=form_html + table_html)
 

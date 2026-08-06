@@ -1,7 +1,9 @@
+import io
 import json
+import zipfile
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from providers.json_status_provider import JsonStatusProvider
 from schemas.layout import LayoutDefinition
@@ -10,6 +12,7 @@ from services.layout_service import (
     LayoutNotFoundError,
     get_layout,
     layout_exists,
+    list_layouts,
     rename_layout,
     save_layout,
 )
@@ -28,6 +31,21 @@ async def export_layout(layout_id: str = Query(...)) -> JSONResponse:
     return JSONResponse(
         content=layout.model_dump(by_alias=True, mode="json"),
         headers={"Content-Disposition": f'attachment; filename="{layout_id}-layout.json"'},
+    )
+
+
+@router.get("/standalone/layout/export/all")
+async def export_all_layouts() -> Response:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for meta in list_layouts():
+            layout = get_layout(meta.id)
+            payload = json.dumps(layout.model_dump(by_alias=True, mode="json"), ensure_ascii=False, indent=2)
+            zf.writestr(f"{meta.id}.json", payload)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="all-layouts.zip"'},
     )
 
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class LayoutItem(BaseModel):
@@ -28,3 +28,14 @@ class LayoutDefinition(BaseModel):
     schema_version: str = Field(alias="schemaVersion")
     layout: LayoutMeta
     items: list[LayoutItem] = []
+
+    @model_validator(mode="after")
+    def _no_duplicate_tag_ids(self) -> "LayoutDefinition":
+        seen: set[str] = set()
+        for item in self.items:
+            if not item.tag_id:
+                continue
+            if item.tag_id in seen:
+                raise ValueError(f"tagId「{item.tag_id}」が複数の装置で重複しています。")
+            seen.add(item.tag_id)
+        return self

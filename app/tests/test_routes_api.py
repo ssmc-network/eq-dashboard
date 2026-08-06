@@ -1,4 +1,6 @@
+import io
 import json
+import zipfile
 
 import httpx
 from fastapi.testclient import TestClient
@@ -83,3 +85,27 @@ def test_save_rename_onto_existing_id_needs_confirmation(client: TestClient, iso
 
     assert response.status_code == 409
     assert response.json()["existingName"] == "Room B"
+
+
+def test_export_all_layouts_returns_zip_with_one_entry_per_canvas(
+    client: TestClient, isolated_provider: IsolatedPaths
+) -> None:
+    _post_save(client, _layout_payload(), original_id="")
+    _post_save(client, _layout_payload(layout_id="room-b", name="Room B"), original_id="")
+
+    response = client.get("/api/standalone/layout/export/all")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+        assert sorted(zf.namelist()) == ["line-a.json", "room-b.json"]
+        contents = json.loads(zf.read("line-a.json"))
+        assert contents["layout"]["id"] == "line-a"
+
+
+def test_export_all_layouts_empty_when_no_canvases(client: TestClient, isolated_provider: IsolatedPaths) -> None:
+    response = client.get("/api/standalone/layout/export/all")
+
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+        assert zf.namelist() == []

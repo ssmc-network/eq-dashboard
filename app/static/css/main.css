@@ -1041,6 +1041,16 @@ button {
   color: var(--text-dim);
 }
 
+.tag-mapping-table__usage {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.tag-mapping-table__unused {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
 /* ==========================================
    Online設定
    ========================================== */

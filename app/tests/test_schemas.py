@@ -127,3 +127,33 @@ def test_layout_item_allows_blank_tag_id() -> None:
     )
 
     assert layout.items[0].tag_id == ""
+
+
+def test_layout_rejects_duplicate_non_blank_tag_id() -> None:
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+                "items": [
+                    {"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": "tag-a"},
+                    {"id": "m2", "label": "Valve", "x": 20, "y": 20, "w": 10, "h": 10, "tagId": "tag-a"},
+                ],
+            }
+        )
+
+
+def test_layout_allows_multiple_blank_tag_ids() -> None:
+    """空tagIdは重複チェック対象外(編集途中の複数装置が同時に未設定でもよい)。"""
+    layout = LayoutDefinition.model_validate(
+        {
+            "schemaVersion": "1.0",
+            "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+            "items": [
+                {"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": ""},
+                {"id": "m2", "label": "Valve", "x": 20, "y": 20, "w": 10, "h": 10, "tagId": ""},
+            ],
+        }
+    )
+
+    assert len(layout.items) == 2
