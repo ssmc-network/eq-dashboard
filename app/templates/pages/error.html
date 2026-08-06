@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}エラー({{ status_code }}) - EQ Dashboard{% endblock %}
+{% block page_title %}エラー{% endblock %}
+{% block content %}
+<div class="error-page">
+  <span class="error-page__code">{{ status_code }}</span>
+  <p class="error-page__message">{{ message }}</p>
+  <a class="btn btn--accent" href="/ui/dashboard">ダッシュボードへ戻る</a>
+</div>
+{% endblock %}

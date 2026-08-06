@@ -78,6 +78,8 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 **設定**: `theme`、`operation_mode`、`default_layout_id`、`default_refresh_interval` はCookieとして永続化される(DBではない)— `routes/ui.py` でサーバー側検証を行い、値が不正/未設定の場合はデフォルトにフォールバックする。
 
+**エラーハンドリング(`main.py`)**: `StarletteHTTPException` と汎用 `Exception` の両方にハンドラを登録している。`/api/*` はJSON API なので常にJSON(`{"detail": ...}`)のまま維持し、`/ui/*` はHTMXリクエスト(`HX-Request` ヘッダーの有無で判定)かどうかで分岐する — フルページ遷移なら `pages/error.html`(実際のステータスコードで返す)、HTMX経由(部分スワップ)なら `partials/inline_error.html` を**ステータス200で**返す(htmxは既定で非2xxレスポンスをスワップしないため、意図的に200にしている。tag-mappingの重複エラーなど、既存のエラー表現パターンと合わせた形)。エラーメッセージはステータスコードのみから生成しており(`_error_message`)、`HTTPException(detail=...)` の文字列(英語・デバッグ用)をそのままユーザーに見せることはしない。汎用 `Exception` ハンドラは `core.log_modules.log_application` でスタックトレース付きログを出してから同じ分岐に乗せる。`TestClient` は既定で未処理例外を再送出してしまうため、この経路をテストする際は `TestClient(app, raise_server_exceptions=False)` を使うこと(`tests/test_error_handling.py` 参照)。
+
 **フロントエンド**: サーバーレンダリングのJinja2 + HTMX、ビルドステップなし。`static/js/htmx.min.js` は(CDNではなく)意図的にベンダリングされている — 工場フロアのオフラインネットワーク環境という利用実態にも、このサンドボックスでCDNアクセスがブロックされている事情にも合致するため。ダッシュボードの自動更新(`static/js/dashboard.js`)は、宣言的な `hx-trigger` ではなく `setInterval` から `htmx.ajax()` を直接呼び出す形でHTMXを手動駆動している — 実行時に再設定可能なポーリング間隔を `hx-trigger` で実現しようとしたところ、実ブラウザでの検証で不安定だったため。レイアウト編集画面(`static/js/layout_editor.js`)のドラッグ/リサイズは生のポインターイベントで実装しており、ドラッグ用ライブラリは使用していない。
 
 **ナビゲーション**: サイドバー(`templates/base.html`)にはトップレベルの項目が3つ — ダッシュボード、レイアウト編集、システム設定(設定ハブ)。設定ハブからは Online設定(`/ui/api-sources`)、タグマッピング(`/ui/tag-mappings`)、Offline設定(`/ui/standalone`)へリンクしている — これらは設定のサブページであり独立したナビ項目ではないため、アクティブ状態のハイライト判定は各ナビ項目の `also: [...]` リストで管理している(`{% set %}` が `{% for %}` ループ内で値を保持しないため、Jinjaの `namespace()` を使って実装)。
