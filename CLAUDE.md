@@ -31,6 +31,8 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd�
 
 composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
 
+**OpenShift上での書き込み権限**: `dev`/`prd`いずれの最終COPY直後にも `RUN chmod -R g+rwX .../app/data` を入れている。イメージは `COPY --chown=1001:0` でUID 1001・GID 0所有にしているが、OpenShiftの既定SCC(`restricted`)はコンテナを**ランダムなUID・GID 0**で起動するため、実行時のUIDはビルド時の1001と一致しない。ファイルのグループ書き込み権限(`g+rwX`)が無いと、`data/`配下へのファイル保存(レイアウト保存・タグマッピング編集など)が`PermissionError`で失敗する(読み取り専用の操作は権限不要なので気づきにくい)。docker-compose(通常のDocker)ではコンテナがイメージ通りのUID 1001で動くためこの問題は再現しない — OpenShift固有の制約。
+
 ## ブランチ運用とCI/CD
 
 **ブランチモデル**: `main`(保護ブランチ、直pushは不可) / `release/<バージョン>`(例: `release/1.0.0`) / 開発ブランチ(`feature/...`、`claude/...`など)の3層。
@@ -76,7 +78,9 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 **オンラインモード(データ取得自体は未実装)**: `repositories/layout_repository.py`、`repositories/status_repository.py`、`providers/api_status_provider.py`、`templates/partials/api_source_detail.html` は、将来のREST APIバックエンドからのレイアウト/ステータス取得用に予約された空のスキャフォールドファイル(`repositories/api_config_repository.py` は接続設定の永続化用として実装済み、上記参照)。`operation_mode`(`online`/`offline`、Cookie)はUIのトグルとしてすでに存在するが、まだプロバイダの挙動をこれで切り替える実装はない — 現状は常に `JsonStatusProvider` が使われる。オンラインモードのデータ取得を実装する際は、`JsonStatusProvider` と同じインターフェース(`list_layouts`、`load_layout`、`save_layout`、`load_status`、`save_status`)を持つAPIベースのプロバイダを追加し、サービス層で `operation_mode` により切り替えること — ルートやテンプレートが `services/` を飛び越えてプロバイダに直接触れることは絶対にしないこと。レスポンスの `response` envelope展開は上記の通り。
 
-**設定**: `theme`、`operation_mode`、`default_layout_id`、`default_refresh_interval` はCookieとして永続化される(DBではない)— `routes/ui.py` でサーバー側検証を行い、値が不正/未設定の場合はデフォルトにフォールバックする。
+**設定**: `theme`、`operation_mode`、`default_layout_id`、`default_refresh_interval` はCookieとして永続化される(DBではない)— `routes/ui.py` でサーバー側検証を行い、値が不正/未設定の場合はデフォルトにフォールバックする。`operation_mode` はCookie未設定時のフォールバック先が`offline`(`_get_operation_mode`)であり、これは意図的なデフォルト — オンラインモードのデータ取得自体が未実装のため、初回アクセス時からオフラインの動作をそのまま体験できるようにしている。
+
+**サンプルデータの規模(`data/sample/`)**: 意図的に最小限に絞っている — キャンバスは`line-a`(Line A)の1つだけで、装置は3台。このうち`tagId`が実際に設定されている(=稼働状態が表示される)のは1台(`run_state_a`/搬送機A、`status.json`・`tag_mappings.json`ともにこの1件のみ)、残り2台はあえて`tagId`を空にしてある — レイアウト編集でタグ未割り当てのまま装置を置いた状態(ダッシュボード上は`eq-box--unknown`のグレー表示)がどう見えるかを、サンプルデータの時点で示すため。装置やキャンバスを追加する目的でこのデータを増やすのは想定外の使い方ではないが、逆に「サンプルとして何を提示するか」を絞る目的でこの3点構成にしていることを踏まえ、意味なく数を増やして戻さないこと。
 
 **エラーハンドリング(`main.py`)**: `StarletteHTTPException` と汎用 `Exception` の両方にハンドラを登録している。`/api/*` はJSON API なので常にJSON(`{"detail": ...}`)のまま維持し、`/ui/*` はHTMXリクエスト(`HX-Request` ヘッダーの有無で判定)かどうかで分岐する — フルページ遷移なら `pages/error.html`(実際のステータスコードで返す)、HTMX経由(部分スワップ)なら `partials/inline_error.html` を**ステータス200で**返す(htmxは既定で非2xxレスポンスをスワップしないため、意図的に200にしている。tag-mappingの重複エラーなど、既存のエラー表現パターンと合わせた形)。エラーメッセージはステータスコードのみから生成しており(`_error_message`)、`HTTPException(detail=...)` の文字列(英語・デバッグ用)をそのままユーザーに見せることはしない。汎用 `Exception` ハンドラは `core.log_modules.log_application` でスタックトレース付きログを出してから同じ分岐に乗せる。`TestClient` は既定で未処理例外を再送出してしまうため、この経路をテストする際は `TestClient(app, raise_server_exceptions=False)` を使うこと(`tests/test_error_handling.py` 参照)。
 
