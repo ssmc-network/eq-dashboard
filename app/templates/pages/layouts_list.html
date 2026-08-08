@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}レイアウト編集 - EQ Dashboard{% endblock %}
-{% block page_title %}レイアウト編集{% endblock %}
+{% block title %}{{ t("nav.layout_editor") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("nav.layout_editor") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>キャンバス一覧</h1>
-    <p>編集するキャンバスを選択するか、新しいキャンバスを作成します。</p>
+    <h1>{{ t("layouts_list.title") }}</h1>
+    <p>{{ t("layouts_list.description") }}</p>
   </div>
 </div>
 

@@ -1,79 +1,70 @@
 {% extends "base.html" %}
-{% block title %}Offline設定 - EQ Dashboard{% endblock %}
-{% block page_title %}Offline設定{% endblock %}
+{% block title %}{{ t("standalone.title") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("standalone.title") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>Offline設定</h1>
-    <p>オフラインモードで使用するレイアウト・状態JSONのexport/importを行います。</p>
+    <h1>{{ t("standalone.title") }}</h1>
+    <p>{{ t("standalone.description") }}</p>
   </div>
-  <a class="btn-link" href="/ui/settings">← システム設定へ</a>
+  <a class="btn-link" href="/ui/settings">{{ t("nav.back_to_settings") }}</a>
 </div>
 
 <div class="card">
   <div class="placeholder">
-    <span class="badge">現在の動作モード: {{ "オンライン" if operation_mode == "online" else "オフライン" }}</span>
-    <p>
-      装置状態はサーバー上のサンプルJSON(layout.json / status.json)から取得しています。
-      外部REST APIに接続するオンラインモードは、バックエンドとの接続実装後に対応予定です。
-    </p>
-    <p class="import-confirm__notice">
-      Import・保存した内容はコンテナ内のファイルに直接書き込まれ、ブラウザをリロードしても消えません。
-      ただし永続化ボリュームは使用していないため、コンテナを再作成すると初期データに戻ります(将来のオンライン運用が本命のため)。
-    </p>
+    <span class="badge">{{ t("standalone.current_mode", mode=t("settings.operation_mode_online") if operation_mode == "online" else t("settings.operation_mode_offline")) }}</span>
+    <p>{{ t("standalone.data_source_notice") }}</p>
+    <p class="import-confirm__notice">{{ t("standalone.persistence_notice") }}</p>
   </div>
 </div>
 
 <div class="standalone-grid">
   <div class="card">
-    <h2>レイアウトJSON</h2>
-    <p class="standalone-section__desc">キャンバスごとの図形配置(schemaVersion / layout / items)。</p>
+    <h2>{{ t("standalone.layout_json_title") }}</h2>
+    <p class="standalone-section__desc">{{ t("standalone.layout_json_desc") }}</p>
 
-    <h3>Export</h3>
+    <h3>{{ t("standalone.export_heading") }}</h3>
     <form class="standalone-form" method="get" action="/api/standalone/layout/export" target="_blank">
       <select name="layout_id">
         {% for meta in available_layouts %}
         <option value="{{ meta.id }}">{{ meta.name }}</option>
         {% endfor %}
       </select>
-      <button type="submit" class="btn">ダウンロード</button>
+      <button type="submit" class="btn">{{ t("standalone.download") }}</button>
     </form>
     <form class="standalone-form" method="get" action="/api/standalone/layout/export/all" target="_blank">
-      <button type="submit" class="btn">全キャンバスをまとめてダウンロード(.zip)</button>
+      <button type="submit" class="btn">{{ t("standalone.download_all_zip") }}</button>
     </form>
 
-    <h3>Import</h3>
+    <h3>{{ t("standalone.import_heading") }}</h3>
     <form class="standalone-form"
           hx-post="/ui/standalone/layout/import"
           hx-target="#layout-import-result"
           hx-swap="innerHTML"
           hx-encoding="multipart/form-data">
       <input type="file" name="file" accept="application/json" required>
-      <button type="submit" class="btn">検証</button>
+      <button type="submit" class="btn">{{ t("standalone.validate") }}</button>
     </form>
     <div id="layout-import-result"></div>
   </div>
 
   <div class="card">
-    <h2>状態JSON</h2>
-    <p class="standalone-section__desc">
-      全キャンバス共通の装置状態スナップショット(schemaVersion / generatedAt / statuses)。
-      キャンバスごとではなく、装置のタグID単位で1つに集約しています。
-    </p>
+    <h2>{{ t("standalone.status_json_title") }}</h2>
+    <p class="standalone-section__desc">{{ t("standalone.status_json_desc") }}</p>
 
-    <h3>Export</h3>
+    <h3>{{ t("standalone.export_heading") }}</h3>
     <form class="standalone-form" method="get" action="/api/standalone/status/export" target="_blank">
-      <button type="submit" class="btn">status.jsonをダウンロード</button>
+      <button type="submit" class="btn">{{ t("standalone.download_status_json") }}</button>
     </form>
 
-    <h3>Import</h3>
+    <h3>{{ t("standalone.import_heading") }}</h3>
     <form class="standalone-form"
           hx-post="/ui/standalone/status/import"
           hx-target="#status-import-result"
           hx-swap="innerHTML"
           hx-encoding="multipart/form-data">
       <input type="file" name="file" accept="application/json" required>
-      <button type="submit" class="btn">検証</button>
+      <button type="submit" class="btn">{{ t("standalone.validate") }}</button>
     </form>
     <div id="status-import-result"></div>
   </div>

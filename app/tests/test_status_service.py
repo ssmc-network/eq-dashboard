@@ -24,6 +24,16 @@ def test_get_dashboard_marks_unmatched_tag_as_unknown(isolated_provider: Isolate
     assert by_id["m2"].status_value == "unknown"
 
 
+def test_get_dashboard_translates_status_label_by_language(
+    isolated_provider: IsolatedPaths, sample_layout: dict
+) -> None:
+    _, boxes = get_dashboard("line-a", lang="en")
+
+    by_id = {box.id: box for box in boxes}
+    assert by_id["m1"].status_label == "Running"
+    assert by_id["m2"].status_label == "Unknown"
+
+
 def test_get_dashboard_raises_for_missing_layout(isolated_provider: IsolatedPaths) -> None:
     with pytest.raises(LayoutNotFoundError):
         get_dashboard("does-not-exist")

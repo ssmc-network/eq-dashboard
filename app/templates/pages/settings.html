@@ -1,35 +1,42 @@
 {% extends "base.html" %}
-{% block title %}システム設定 - EQ Dashboard{% endblock %}
-{% block page_title %}システム設定{% endblock %}
+{% block title %}{{ t("settings.title") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("settings.title") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>システム設定</h1>
-    <p>動作モード・テーマ・ダッシュボードの既定動作を設定します。</p>
+    <h1>{{ t("settings.title") }}</h1>
+    <p>{{ t("settings.description") }}</p>
   </div>
 </div>
 
 <form class="card" method="post" action="/ui/settings">
   <div class="settings-form">
     <fieldset class="settings-field mode-toggle-field">
-      <span>動作モード</span>
-      <div class="mode-toggle" role="radiogroup" aria-label="動作モード">
+      <span>{{ t("settings.operation_mode_label") }}</span>
+      <div class="mode-toggle" role="radiogroup" aria-label="{{ t('settings.operation_mode_label') }}">
         <input type="radio" id="mode-offline" name="operation_mode" value="offline" {% if operation_mode == "offline" %}checked{% endif %}>
-        <label for="mode-offline">オフライン</label>
+        <label for="mode-offline">{{ t("settings.operation_mode_offline") }}</label>
         <input type="radio" id="mode-online" name="operation_mode" value="online" {% if operation_mode == "online" %}checked{% endif %}>
-        <label for="mode-online">オンライン</label>
+        <label for="mode-online">{{ t("settings.operation_mode_online") }}</label>
       </div>
     </fieldset>
     <label class="settings-field">
-      <span>テーマ</span>
+      <span>{{ t("settings.theme_label") }}</span>
       <select name="theme">
-        <option value="system" {% if theme == "system" %}selected{% endif %}>システム(自動)</option>
-        <option value="light" {% if theme == "light" %}selected{% endif %}>ライト</option>
-        <option value="dark" {% if theme == "dark" %}selected{% endif %}>ダーク</option>
+        <option value="system" {% if theme == "system" %}selected{% endif %}>{{ t("settings.theme_system") }}</option>
+        <option value="light" {% if theme == "light" %}selected{% endif %}>{{ t("settings.theme_light") }}</option>
+        <option value="dark" {% if theme == "dark" %}selected{% endif %}>{{ t("settings.theme_dark") }}</option>
       </select>
     </label>
     <label class="settings-field">
-      <span>デフォルトキャンバス</span>
+      <span>{{ t("settings.language_label") }}</span>
+      <select name="language">
+        <option value="ja" {% if language == "ja" %}selected{% endif %}>{{ t("settings.language_ja") }}</option>
+        <option value="en" {% if language == "en" %}selected{% endif %}>{{ t("settings.language_en") }}</option>
+      </select>
+    </label>
+    <label class="settings-field">
+      <span>{{ t("settings.default_layout_label") }}</span>
       <select name="default_layout_id">
         {% for meta in available_layouts %}
         <option value="{{ meta.id }}" {% if meta.id == default_layout_id %}selected{% endif %}>{{ meta.name }}</option>
@@ -37,33 +44,33 @@
       </select>
     </label>
     <label class="settings-field">
-      <span>ダッシュボードの初期更新間隔(秒)</span>
+      <span>{{ t("settings.default_refresh_label") }}</span>
       <input type="number" name="default_refresh_interval" min="1" step="1" value="{{ default_refresh_interval }}">
     </label>
   </div>
-  <button type="submit" class="btn btn--accent">保存</button>
+  <button type="submit" class="btn btn--accent">{{ t("common.save") }}</button>
 </form>
 
 <div class="page-header page-header--section">
   <div>
-    <h2>関連設定</h2>
+    <h2>{{ t("settings.related_settings") }}</h2>
   </div>
 </div>
 <div class="nav-grid">
   <a class="nav-card" href="/ui/api-sources">
     <span class="nav-card__icon">⇄</span>
-    <span class="nav-card__title">Online設定</span>
-    <span class="nav-card__desc">オンラインモードで使用するAPI接続先・認証・エンドポイントを管理します。</span>
+    <span class="nav-card__title">{{ t("settings.api_sources_title") }}</span>
+    <span class="nav-card__desc">{{ t("settings.api_sources_desc") }}</span>
   </a>
   <a class="nav-card" href="/ui/tag-mappings">
     <span class="nav-card__icon">#</span>
-    <span class="nav-card__title">タグマッピング</span>
-    <span class="nav-card__desc">APIレスポンス項目と内部タグを紐づけます。</span>
+    <span class="nav-card__title">{{ t("settings.tag_mappings_title") }}</span>
+    <span class="nav-card__desc">{{ t("settings.tag_mappings_desc") }}</span>
   </a>
   <a class="nav-card" href="/ui/standalone">
     <span class="nav-card__icon">⇅</span>
-    <span class="nav-card__title">Offline設定</span>
-    <span class="nav-card__desc">オフラインモードで使用するレイアウト・状態JSONのexport/importを行います。</span>
+    <span class="nav-card__title">{{ t("settings.standalone_title") }}</span>
+    <span class="nav-card__desc">{{ t("settings.standalone_desc") }}</span>
   </a>
 </div>
 {% endblock %}

@@ -4,11 +4,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from core.i18n import get_language, register_i18n_globals, translate
 from core.log_modules import log_application
 from routes import api, ui
 
 app = FastAPI(title="EQ Dashboard")
 templates = Jinja2Templates(directory="templates")
+register_i18n_globals(templates)
 logger = log_application(__name__)
 
 HTTP_NOT_FOUND = 404
@@ -25,16 +27,16 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def _error_message(status_code: int) -> str:
+def _error_message(status_code: int, lang: str) -> str:
     if status_code == HTTP_NOT_FOUND:
-        return "ページが見つかりませんでした。"
+        return translate("error.not_found", lang)
     if status_code >= HTTP_SERVER_ERROR:
-        return "予期しないエラーが発生しました。"
-    return "エラーが発生しました。"
+        return translate("error.server_error", lang)
+    return translate("error.generic", lang)
 
 
 def _render_error(request: Request, status_code: int) -> Response:
-    message = _error_message(status_code)
+    message = _error_message(status_code, get_language(request))
     if request.headers.get("HX-Request") == "true":
         return templates.TemplateResponse(request, "partials/inline_error.html", {"message": message}, status_code=200)
     return templates.TemplateResponse(

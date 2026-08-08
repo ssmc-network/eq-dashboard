@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
+from core.i18n import DEFAULT_LANGUAGE, LANGUAGE_CHOICES, get_language, register_i18n_globals, translate
 from repositories.api_config_repository import ApiConfigRepository
 from schemas.api_config import AUTH_TYPES, ApiConfig
 from schemas.layout import LayoutDefinition, LayoutMeta
@@ -20,7 +21,7 @@ from services.layout_service import (
     list_layouts,
     save_layout,
 )
-from services.status_service import get_dashboard, save_status
+from services.status_service import DashboardBox, get_dashboard, save_status
 from services.tag_mapping_service import (
     TagMappingExistsError,
     TagMappingNotFoundError,
@@ -34,6 +35,7 @@ from services.tag_mapping_service import (
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="templates")
+register_i18n_globals(templates)
 _api_config_repo = ApiConfigRepository()
 
 DEFAULT_LAYOUT_ID = "line-a"
@@ -59,7 +61,7 @@ async def dashboard_default(request: Request) -> RedirectResponse:
 
 @router.get("/ui/dashboard/{layout_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
-    layout, boxes = _load_dashboard(layout_id)
+    layout, boxes = _load_dashboard(layout_id, get_language(request))
     return templates.TemplateResponse(
         request,
         "pages/dashboard.html",
@@ -74,7 +76,7 @@ async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
 
 @router.get("/ui/dashboard/{layout_id}/items", response_class=HTMLResponse)
 async def dashboard_items(request: Request, layout_id: str) -> HTMLResponse:
-    layout, boxes = _load_dashboard(layout_id)
+    layout, boxes = _load_dashboard(layout_id, get_language(request))
     return templates.TemplateResponse(
         request,
         "partials/dashboard_items.html",
@@ -180,7 +182,7 @@ async def test_api_config(
         apiKeyHeader=api_key_header.strip() or "X-API-Key",
         credential=credential,
     )
-    result = await test_connection(config)
+    result = await test_connection(config, get_language(request))
     return templates.TemplateResponse(request, "partials/api_test_result.html", {"result": result})
 
 
@@ -245,7 +247,7 @@ async def tag_mapping_create(
             {
                 "editing": False,
                 "mapping": mapping,
-                "error": f"tagId「{tag_id}」は既に登録されています。",
+                "error": translate("tag_mappings.already_registered", get_language(request), tag_id=tag_id),
             },
         )
     return _tag_mapping_saved_response(request)
@@ -305,14 +307,14 @@ async def standalone(request: Request) -> HTMLResponse:
 @router.post("/ui/standalone/layout/import", response_class=HTMLResponse)
 async def standalone_import_layout(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     raw = await file.read()
-    result = validate_layout_json(raw)
+    result = validate_layout_json(raw, get_language(request))
     exists = bool(result.ok and result.summary and layout_exists(result.summary["id"]))
     return templates.TemplateResponse(
         request,
         "partials/import_result.html",
         {
             "result": result,
-            "kind": "レイアウト",
+            "kind": "layout",
             "filename": file.filename,
             "raw_json": raw.decode("utf-8") if result.ok else None,
             "exists": exists,
@@ -323,12 +325,13 @@ async def standalone_import_layout(request: Request, file: UploadFile = File(...
 
 @router.post("/ui/standalone/layout/import/confirm", response_class=HTMLResponse)
 async def standalone_import_layout_confirm(request: Request, raw_json: str = Form(...)) -> HTMLResponse:
-    result = validate_layout_json(raw_json.encode("utf-8"))
+    lang = get_language(request)
+    result = validate_layout_json(raw_json.encode("utf-8"), lang)
     if not result.ok:
         return templates.TemplateResponse(
             request,
             "partials/import_result.html",
-            {"result": result, "kind": "レイアウト", "filename": "(保存時の再検証)"},
+            {"result": result, "kind": "layout", "filename": translate("import_result.revalidation_filename", lang)},
         )
 
     layout = LayoutDefinition.model_validate(json.loads(raw_json))
@@ -344,13 +347,13 @@ async def standalone_import_layout_confirm(request: Request, raw_json: str = For
 @router.post("/ui/standalone/status/import", response_class=HTMLResponse)
 async def standalone_import_status(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     raw = await file.read()
-    result = validate_status_json(raw)
+    result = validate_status_json(raw, get_language(request))
     return templates.TemplateResponse(
         request,
         "partials/import_result.html",
         {
             "result": result,
-            "kind": "状態",
+            "kind": "status",
             "filename": file.filename,
             "raw_json": raw.decode("utf-8") if result.ok else None,
             "confirm_url": "/ui/standalone/status/import/confirm",
@@ -360,12 +363,13 @@ async def standalone_import_status(request: Request, file: UploadFile = File(...
 
 @router.post("/ui/standalone/status/import/confirm", response_class=HTMLResponse)
 async def standalone_import_status_confirm(request: Request, raw_json: str = Form(...)) -> HTMLResponse:
-    result = validate_status_json(raw_json.encode("utf-8"))
+    lang = get_language(request)
+    result = validate_status_json(raw_json.encode("utf-8"), lang)
     if not result.ok:
         return templates.TemplateResponse(
             request,
             "partials/import_result.html",
-            {"result": result, "kind": "状態", "filename": "(保存時の再検証)"},
+            {"result": result, "kind": "status", "filename": translate("import_result.revalidation_filename", lang)},
         )
 
     status = StatusSnapshot.model_validate(json.loads(raw_json))
@@ -390,6 +394,7 @@ async def settings(request: Request) -> HTMLResponse:
         "pages/settings.html",
         {
             "theme": _get_theme(request),
+            "language": get_language(request),
             "operation_mode": _get_operation_mode(request),
             "available_layouts": layouts,
             "default_layout_id": default_layout_id,
@@ -401,12 +406,16 @@ async def settings(request: Request) -> HTMLResponse:
 @router.post("/ui/settings")
 async def save_settings(
     theme: str = Form("system"),
+    language: str = Form(DEFAULT_LANGUAGE),
     operation_mode: str = Form("offline"),
     default_layout_id: str = Form(DEFAULT_LAYOUT_ID),
     default_refresh_interval: int = Form(DEFAULT_REFRESH_INTERVAL_SEC),
 ) -> RedirectResponse:
     if theme not in THEME_CHOICES:
         theme = "system"
+
+    if language not in LANGUAGE_CHOICES:
+        language = DEFAULT_LANGUAGE
 
     if operation_mode not in OPERATION_MODE_CHOICES:
         operation_mode = "offline"
@@ -420,6 +429,7 @@ async def save_settings(
 
     response = RedirectResponse(url="/ui/settings", status_code=303)
     response.set_cookie("theme", theme, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
+    response.set_cookie("language", language, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
     response.set_cookie("operation_mode", operation_mode, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
     response.set_cookie("default_layout_id", default_layout_id, max_age=SETTINGS_COOKIE_MAX_AGE, samesite="lax")
     response.set_cookie(
@@ -463,14 +473,14 @@ def _tag_mapping_blank_value_response(
         {
             "editing": editing,
             "mapping": raw_mapping,
-            "error": "tagIdとAPIフィールドは必須です(空白のみは不可)。",
+            "error": translate("tag_mappings.blank_value_error", get_language(request)),
         },
     )
 
 
-def _load_dashboard(layout_id: str):
+def _load_dashboard(layout_id: str, lang: str) -> tuple[LayoutDefinition, list[DashboardBox]]:
     try:
-        return get_dashboard(layout_id)
+        return get_dashboard(layout_id, lang)
     except LayoutNotFoundError as exc:
         raise HTTPException(status_code=404, detail="layout not found") from exc
 

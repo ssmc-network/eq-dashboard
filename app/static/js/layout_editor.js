@@ -46,7 +46,7 @@
   }
 
   function renderStatus() {
-    statusEl.textContent = `${state.items.length}件の装置`;
+    statusEl.textContent = t("layout_editor.item_count", { count: state.items.length });
   }
 
   function renderItems() {
@@ -62,7 +62,7 @@
 
       const label = document.createElement("span");
       label.className = "eq-editable-box__label";
-      label.textContent = item.label || "(no label)";
+      label.textContent = item.label || t("layout_editor.no_label");
       box.appendChild(label);
 
       const handle = document.createElement("span");
@@ -116,8 +116,8 @@
     const originY = item.y;
 
     function onMove(ev) {
-      item.x = Math.max(0, originX + (ev.clientX - startX));
-      item.y = Math.max(0, originY + (ev.clientY - startY));
+      item.x = Math.max(0, Math.round(originX + (ev.clientX - startX)));
+      item.y = Math.max(0, Math.round(originY + (ev.clientY - startY)));
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
       if (selectedId === item.id) {
@@ -145,8 +145,8 @@
     const originH = item.h;
 
     function onMove(ev) {
-      item.w = Math.max(20, originW + (ev.clientX - startX));
-      item.h = Math.max(20, originH + (ev.clientY - startY));
+      item.w = Math.max(20, Math.round(originW + (ev.clientX - startX)));
+      item.h = Math.max(20, Math.round(originH + (ev.clientY - startY)));
       box.style.width = `${item.w}px`;
       box.style.height = `${item.h}px`;
       if (selectedId === item.id) {
@@ -172,7 +172,7 @@
     el.addEventListener("input", () => {
       const item = findItem(selectedId);
       if (!item) return;
-      item[key] = isNumber ? Number(el.value) || 0 : el.value;
+      item[key] = isNumber ? Math.round(Number(el.value) || 0) : el.value;
       renderItems();
     });
   }
@@ -193,7 +193,7 @@
 
   addBtn.addEventListener("click", () => {
     const id = `item-${nextSeq++}`;
-    state.items.push({ id, label: "新規装置", x: 40, y: 40, w: 120, h: 80, tagId: "" });
+    state.items.push({ id, label: t("layout_editor.new_item_label"), x: 40, y: 40, w: 120, h: 80, tagId: "" });
     renderStatus();
     selectedId = id;
     renderItems();
@@ -233,7 +233,7 @@
 
   downloadBtn.addEventListener("click", () => {
     if (!state.id || !state.name) {
-      window.alert("ID と 名前 を入力してください。");
+      window.alert(t("layout_editor.id_name_required"));
       return;
     }
     const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], { type: "application/json" });
@@ -261,12 +261,12 @@
 
   saveBtn.addEventListener("click", async () => {
     if (!state.id || !state.name) {
-      window.alert("ID と 名前 を入力してください。");
+      window.alert(t("layout_editor.id_name_required"));
       return;
     }
     saveBtn.disabled = true;
     const originalLabel = saveBtn.textContent;
-    saveBtn.textContent = "保存中...";
+    saveBtn.textContent = t("layout_editor.saving");
     saveMessage.className = "editor-save-message";
     saveMessage.textContent = "";
     try {
@@ -274,25 +274,25 @@
 
       if (res.status === 409 && data.needsConfirmation) {
         const confirmed = window.confirm(
-          `id「${state.id}」は既存のキャンバス「${data.existingName}」です。上書きしますか?`
+          t("layout_editor.overwrite_confirm", { id: state.id, name: data.existingName })
         );
         if (!confirmed) {
-          saveMessage.textContent = "保存をキャンセルしました。";
+          saveMessage.textContent = t("layout_editor.save_cancelled");
           return;
         }
         ({ res, data } = await postSave(true));
       }
 
       if (res.ok && data.ok) {
-        saveMessage.textContent = `✓ サーバーに保存しました(${data.id})`;
+        saveMessage.textContent = t("layout_editor.save_ok", { id: data.id });
         saveMessage.classList.add("editor-save-message--ok");
         originalId = data.id;
       } else {
-        saveMessage.textContent = `✕ 保存に失敗しました: ${(data.errors || []).join(" / ")}`;
+        saveMessage.textContent = t("layout_editor.save_failed", { errors: (data.errors || []).join(" / ") });
         saveMessage.classList.add("editor-save-message--error");
       }
     } catch (err) {
-      saveMessage.textContent = "✕ 通信エラーが発生しました。";
+      saveMessage.textContent = t("layout_editor.network_error");
       saveMessage.classList.add("editor-save-message--error");
     } finally {
       saveBtn.disabled = false;

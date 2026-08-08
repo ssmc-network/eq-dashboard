@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}ダッシュボード - EQ Dashboard{% endblock %}
-{% block page_title %}ダッシュボード{% endblock %}
+{% block title %}{{ t("dashboard.title") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("dashboard.title") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <h1>{{ layout.layout.name }}</h1>
-    <p>簡易図面上の装置を稼働状態の色で表示します(サンプルJSONデータ)。</p>
+    <p>{{ t("dashboard.description") }}</p>
   </div>
   <label class="toolbar-field">
-    <span>キャンバス</span>
+    <span>{{ t("dashboard.canvas_label") }}</span>
     <select id="layout-switcher">
       {% for meta in available_layouts %}
       <option value="{{ meta.id }}" {% if meta.id == layout.layout.id %}selected{% endif %}>{{ meta.name }}</option>
@@ -19,17 +19,17 @@
 
 <div class="dashboard-toolbar">
   <label class="toolbar-field">
-    <span>自動更新</span>
+    <span>{{ t("dashboard.auto_refresh_label") }}</span>
     <select id="refresh-mode">
-      <option value="off">なし</option>
-      <option value="on" selected>自動更新</option>
+      <option value="off">{{ t("dashboard.auto_refresh_off") }}</option>
+      <option value="on" selected>{{ t("dashboard.auto_refresh_on") }}</option>
     </select>
   </label>
   <label class="toolbar-field">
-    <span>間隔(秒)</span>
+    <span>{{ t("dashboard.interval_label") }}</span>
     <input type="number" id="refresh-interval" min="1" step="1" value="{{ default_refresh_interval }}">
   </label>
-  <span class="badge" id="refresh-status">{{ default_refresh_interval }}秒ごとに更新</span>
+  <span class="badge" id="refresh-status">{{ t("dashboard.refresh_status_on", interval=default_refresh_interval) }}</span>
 </div>
 
 <div class="dashboard-canvas-wrap">
