@@ -489,6 +489,7 @@ button {
 }
 
 .dashboard-canvas-wrap {
+  position: relative;
   overflow: auto;
   background: var(--panel-sunken);
   border: 1px solid var(--border);
@@ -502,6 +503,37 @@ button {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+}
+
+/* 全画面表示: #dashboard-canvas-wrapをFullscreen APIの対象にする(auto-refreshで
+   innerHTMLが差し替わる#dashboard-itemsそのものは対象にしない。差し替わっても
+   終了ボタンが消えないように、ボタンは#dashboard-canvas-wrap直下に置く)。
+   中の.dashboard-canvasはJS側でscale()して画面いっぱいに拡大する
+   (位置決めは絶対座標のまま崩れない)。 */
+#dashboard-canvas-wrap:fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+#dashboard-canvas-wrap:fullscreen .dashboard-canvas {
+  transform-origin: center center;
+  border: none;
+}
+
+.fullscreen-exit-overlay {
+  display: none;
+}
+
+#dashboard-canvas-wrap:fullscreen .fullscreen-exit-overlay {
+  display: inline-flex;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
 }
 
 /* 装置図形(状態色で塗りつぶす) */
@@ -999,6 +1031,12 @@ button {
   color: var(--status-alarm);
 }
 
+.api-discovery-result {
+  margin: 0 0 0.6rem;
+  font-size: 0.82rem;
+  color: var(--status-running);
+}
+
 .tag-mapping-table {
   width: 100%;
   border-collapse: collapse;
@@ -1169,5 +1207,19 @@ button {
 }
 
 .inline-error p {
+  margin: 0;
+}
+
+.dashboard-fallback-notice {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.82rem;
+  color: var(--accent-strong);
+}
+
+.dashboard-fallback-notice p {
   margin: 0;
 }

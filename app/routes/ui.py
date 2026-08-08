@@ -1,4 +1,5 @@
 import json
+import re
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -11,6 +12,7 @@ from schemas.api_config import AUTH_TYPES, ApiConfig
 from schemas.layout import LayoutDefinition, LayoutMeta
 from schemas.status import StatusSnapshot
 from schemas.tag_mapping import TagMapping
+from services.api_discovery_service import discover_fields
 from services.api_test_service import test_connection
 from services.import_export_service import validate_layout_json, validate_status_json
 from services.layout_service import (
@@ -61,15 +63,27 @@ async def dashboard_default(request: Request) -> RedirectResponse:
 
 @router.get("/ui/dashboard/{layout_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
-    layout, boxes = _load_dashboard(layout_id, get_language(request))
+    lang = get_language(request)
+    layouts = list_layouts()
+    resolved_id, fallback_from = _resolve_dashboard_layout_id(layout_id, layouts)
+    if resolved_id is None:
+        raise HTTPException(status_code=404, detail="layout not found")
+
+    layout, boxes = get_dashboard(resolved_id, lang)
+    fallback_notice = (
+        translate("dashboard.fallback_notice", lang, requested=fallback_from, shown=layout.layout.name)
+        if fallback_from
+        else None
+    )
     return templates.TemplateResponse(
         request,
         "pages/dashboard.html",
         {
             "layout": layout,
             "boxes": boxes,
-            "available_layouts": list_layouts(),
+            "available_layouts": layouts,
             "default_refresh_interval": _get_default_refresh_interval(request),
+            "fallback_notice": fallback_notice,
         },
     )
 
@@ -191,8 +205,55 @@ async def tag_mappings(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "pages/tag_mappings.html",
-        {"mappings": list_tag_mappings(), "editing": False, "mapping": None, "tag_usage": get_tag_usage()},
+        {
+            "mappings": list_tag_mappings(),
+            "editing": False,
+            "mapping": None,
+            "tag_usage": get_tag_usage(),
+            "discover_result": None,
+            "bulk_message": None,
+        },
     )
+
+
+@router.post("/ui/tag-mappings/discover", response_class=HTMLResponse)
+async def tag_mappings_discover(request: Request) -> HTMLResponse:
+    result = await discover_fields(_api_config_repo.load(), get_language(request))
+    return templates.TemplateResponse(
+        request,
+        "partials/tag_mapping_discovery.html",
+        {"discover_result": result, "bulk_message": None},
+    )
+
+
+@router.post("/ui/tag-mappings/bulk-create", response_class=HTMLResponse)
+async def tag_mappings_bulk_create(request: Request, selected_paths: list[str] = Form([])) -> HTMLResponse:
+    created = 0
+    skipped = 0
+    for path in selected_paths:
+        try:
+            mapping = TagMapping(tagId=_derive_tag_id(path), apiField=path)
+        except ValidationError:
+            continue
+        try:
+            create_tag_mapping(mapping)
+            created += 1
+        except TagMappingExistsError:
+            skipped += 1
+
+    lang = get_language(request)
+    bulk_message = translate("api_discovery.bulk_result", lang, created=created, skipped=skipped)
+    discovery_html = templates.env.get_template("partials/tag_mapping_discovery.html").render(
+        {"request": request, "discover_result": None, "bulk_message": bulk_message}
+    )
+    table_html = templates.env.get_template("partials/tag_mapping_table.html").render(
+        {"request": request, "mappings": list_tag_mappings(), "oob": True, "tag_usage": get_tag_usage()}
+    )
+    return HTMLResponse(content=discovery_html + table_html)
+
+
+def _derive_tag_id(api_field_path: str) -> str:
+    return re.sub(r"[^A-Za-z0-9_]+", "_", api_field_path).strip("_") or "field"
 
 
 @router.get("/ui/tag-mappings/new", response_class=HTMLResponse)
@@ -483,6 +544,18 @@ def _load_dashboard(layout_id: str, lang: str) -> tuple[LayoutDefinition, list[D
         return get_dashboard(layout_id, lang)
     except LayoutNotFoundError as exc:
         raise HTTPException(status_code=404, detail="layout not found") from exc
+
+
+def _resolve_dashboard_layout_id(layout_id: str, layouts: list[LayoutMeta]) -> tuple[str | None, str | None]:
+    """指定idのキャンバスが存在すればそのまま返す。存在しない場合(リネーム/削除された
+    デフォルトキャンバスなど)は、他に表示できるキャンバスがあればその1件目にフォール
+    バックする(戻り値の2番目の要素に元のidを入れ、呼び出し元で案内メッセージを出す)。
+    表示できるキャンバスが1件も無ければ(None, None)を返し、404にする。"""
+    if any(meta.id == layout_id for meta in layouts):
+        return layout_id, None
+    if layouts:
+        return layouts[0].id, layout_id
+    return None, None
 
 
 def _serialize_layout(layout: LayoutDefinition) -> str:

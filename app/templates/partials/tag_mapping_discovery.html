@@ -1,0 +1,57 @@
+<div id="tag-mapping-discovery-wrap">
+  <h3>{{ t("api_discovery.section_title") }}</h3>
+  <p class="standalone-section__desc">{{ t("api_discovery.section_desc") }}</p>
+
+  {% if bulk_message %}
+  <p class="api-discovery-result">{{ bulk_message }}</p>
+  <button type="button" class="btn"
+          hx-post="/ui/tag-mappings/discover"
+          hx-target="#tag-mapping-discovery-wrap"
+          hx-swap="outerHTML">{{ t("api_discovery.fetch_button") }}</button>
+
+  {% elif discover_result is none %}
+  <button type="button" class="btn"
+          hx-post="/ui/tag-mappings/discover"
+          hx-target="#tag-mapping-discovery-wrap"
+          hx-swap="outerHTML">{{ t("api_discovery.fetch_button") }}</button>
+
+  {% elif not discover_result.ok %}
+  <p class="tag-mapping-form__error">{{ discover_result.message }}</p>
+  <button type="button" class="btn"
+          hx-post="/ui/tag-mappings/discover"
+          hx-target="#tag-mapping-discovery-wrap"
+          hx-swap="outerHTML">{{ t("api_discovery.fetch_button") }}</button>
+
+  {% else %}
+  {% if discover_result.truncated %}
+  <p class="standalone-section__desc">{{ t("api_discovery.truncated_notice", limit=discover_result.fields|length) }}</p>
+  {% endif %}
+  <form hx-post="/ui/tag-mappings/bulk-create" hx-target="#tag-mapping-discovery-wrap" hx-swap="outerHTML">
+    <table class="tag-mapping-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>{{ t("tag_mappings.field_api_field") }}</th>
+          <th>{{ t("api_discovery.sample_value_column") }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in discover_result.fields %}
+        <tr>
+          <td><input type="checkbox" name="selected_paths" value="{{ f.path }}"></td>
+          <td><code>{{ f.path }}</code></td>
+          <td>{{ f.value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="tag-mapping-form__actions">
+      <button type="submit" class="btn btn--accent">{{ t("api_discovery.create_selected") }}</button>
+      <button type="button" class="btn"
+              hx-post="/ui/tag-mappings/discover"
+              hx-target="#tag-mapping-discovery-wrap"
+              hx-swap="outerHTML">{{ t("api_discovery.fetch_button") }}</button>
+    </div>
+  </form>
+  {% endif %}
+</div>

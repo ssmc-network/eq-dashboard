@@ -21,7 +21,7 @@ class ApiTestResult:
     elapsed_ms: int | None = None
 
 
-def _build_headers(config: ApiConfig) -> dict[str, str]:
+def build_auth_headers(config: ApiConfig) -> dict[str, str]:
     if config.auth_type == "api_key" and config.credential:
         return {config.api_key_header or "X-API-Key": config.credential}
     if config.auth_type == "bearer" and config.credential:
@@ -35,7 +35,7 @@ async def test_connection(config: ApiConfig, lang: str = DEFAULT_LANGUAGE) -> Ap
         _log_result(config, result)
         return result
 
-    headers = _build_headers(config)
+    headers = build_auth_headers(config)
     start = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
