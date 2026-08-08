@@ -20,6 +20,20 @@ def test_dashboard_404_for_unknown_layout(client: TestClient, isolated_provider:
     assert response.status_code == 404
 
 
+def test_dashboard_has_fullscreen_button(client: TestClient, sample_layout: dict) -> None:
+    response = client.get("/ui/dashboard/line-a")
+
+    assert 'id="fullscreen-btn"' in response.text
+    assert 'id="fullscreen-exit-btn"' in response.text
+
+
+def test_layout_editor_has_no_fullscreen_button(client: TestClient, sample_layout: dict) -> None:
+    """全画面表示はダッシュボード専用の機能で、レイアウト編集画面には不要なため。"""
+    response = client.get("/ui/layouts/line-a/edit")
+
+    assert 'id="fullscreen-btn"' not in response.text
+
+
 def test_layouts_list_shows_known_layout(client: TestClient, sample_layout: dict) -> None:
     response = client.get("/ui/layouts")
 

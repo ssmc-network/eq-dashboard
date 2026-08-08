@@ -86,6 +86,8 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 **フロントエンド**: サーバーレンダリングのJinja2 + HTMX、ビルドステップなし。`static/js/htmx.min.js` は(CDNではなく)意図的にベンダリングされている — 工場フロアのオフラインネットワーク環境という利用実態にも、このサンドボックスでCDNアクセスがブロックされている事情にも合致するため。ダッシュボードの自動更新(`static/js/dashboard.js`)は、宣言的な `hx-trigger` ではなく `setInterval` から `htmx.ajax()` を直接呼び出す形でHTMXを手動駆動している — 実行時に再設定可能なポーリング間隔を `hx-trigger` で実現しようとしたところ、実ブラウザでの検証で不安定だったため。レイアウト編集画面(`static/js/layout_editor.js`)のドラッグ/リサイズは生のポインターイベントで実装しており、ドラッグ用ライブラリは使用していない。
 
+**ダッシュボードの全画面表示**(ダッシュボードのみ、レイアウト編集には無い): Fullscreen APIの対象は `#dashboard-canvas-wrap`(auto-refreshで `innerHTML` が丸ごと差し替わる `#dashboard-items` そのものではない) — 差し替え対象を全画面化してしまうと、その中に置いた終了ボタンごと消えてしまうため。全画面中は終了ボタン(`#fullscreen-exit-btn`、`.fullscreen-exit-overlay`)が `#dashboard-canvas-wrap` 内にオーバーレイ表示される — ツールバーの開始ボタンは `#dashboard-canvas-wrap` の外にあるため、全画面中はブラウザによって非表示になり押せなくなる(Escapeキーでも終了できるが、クリックできる手段も必要なため内部に複製している)。装置図形を敷き詰めた `.dashboard-canvas`(固定px幅・高さ、装置は絶対座標)は、全画面化しても座標がずれないよう位置は変えず、`transform: scale()` で画面いっぱいに拡大している(スケール比は `min(viewportWidth / canvasWidth, viewportHeight / canvasHeight)` をJS側で計算)。auto-refreshで `.dashboard-canvas` 自体が作り直されるとscaleも失われるため、`htmx:afterSwap` イベントで再計算している。
+
 **ナビゲーション**: サイドバー(`templates/base.html`)にはトップレベルの項目が3つ — ダッシュボード、レイアウト編集、システム設定(設定ハブ)。設定ハブからは Online設定(`/ui/api-sources`)、タグマッピング(`/ui/tag-mappings`)、Offline設定(`/ui/standalone`)へリンクしている — これらは設定のサブページであり独立したナビ項目ではないため、アクティブ状態のハイライト判定は各ナビ項目の `also: [...]` リストで管理している(`{% set %}` が `{% for %}` ループ内で値を保持しないため、Jinjaの `namespace()` を使って実装)。
 
 CSS(`static/css/main.css`)は `@media (prefers-color-scheme: dark)` と `:root[data-theme="dark"/"light"]` の両方でテーマを定義している(手動トグルがOS設定より優先)。加えて、装置キャンバス用に別途 `--diagram-*` トークン群を用意している — キャンバスはアプリのテーマに関わらず常に固定の白い「紙」背景であるため、その配色はライト/ダークのトークン体系には含めていない。

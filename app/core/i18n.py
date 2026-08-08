@@ -35,6 +35,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "dashboard.refresh_status_on": {"ja": "{interval}秒ごとに更新", "en": "Refreshing every {interval}s"},
     "dashboard.refresh_status_off": {"ja": "自動更新なし", "en": "Auto refresh off"},
     "dashboard.updated_at_label": {"ja": "更新", "en": "Updated"},
+    "dashboard.fullscreen_enter": {"ja": "全画面表示", "en": "Fullscreen"},
+    "dashboard.fullscreen_exit": {"ja": "全画面終了", "en": "Exit Fullscreen"},
     # 装置ステータス
     "status.running": {"ja": "稼働中", "en": "Running"},
     "status.stopped": {"ja": "停止中", "en": "Stopped"},

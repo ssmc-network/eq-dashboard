@@ -30,9 +30,11 @@
     <input type="number" id="refresh-interval" min="1" step="1" value="{{ default_refresh_interval }}">
   </label>
   <span class="badge" id="refresh-status">{{ t("dashboard.refresh_status_on", interval=default_refresh_interval) }}</span>
+  <button type="button" id="fullscreen-btn" class="btn">{{ t("dashboard.fullscreen_enter") }}</button>
 </div>
 
-<div class="dashboard-canvas-wrap">
+<div class="dashboard-canvas-wrap" id="dashboard-canvas-wrap">
+  <button type="button" id="fullscreen-exit-btn" class="fullscreen-exit-overlay">{{ t("dashboard.fullscreen_exit") }}</button>
   <div id="dashboard-items" data-refresh-url="/ui/dashboard/{{ layout.layout.id }}/items">
     {% include "partials/dashboard_items.html" %}
   </div>

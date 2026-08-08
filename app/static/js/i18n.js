@@ -15,6 +15,8 @@
     },
     "dashboard.refresh_status_on": { ja: "{interval}秒ごとに更新", en: "Refreshing every {interval}s" },
     "dashboard.refresh_status_off": { ja: "自動更新なし", en: "Auto refresh off" },
+    "dashboard.fullscreen_enter": { ja: "全画面表示", en: "Fullscreen" },
+    "dashboard.fullscreen_exit": { ja: "全画面終了", en: "Exit Fullscreen" },
   };
 
   function t(key, params) {
