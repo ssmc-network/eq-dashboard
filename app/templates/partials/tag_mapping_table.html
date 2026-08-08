@@ -3,11 +3,11 @@
     <thead>
       <tr>
         <th>tagId</th>
-        <th>APIフィールド</th>
-        <th>稼働中の値</th>
-        <th>停止中の値</th>
-        <th>アラームの値</th>
-        <th>使用箇所</th>
+        <th>{{ t("tag_mappings.field_api_field") }}</th>
+        <th>{{ t("tag_mappings.field_running_value") }}</th>
+        <th>{{ t("tag_mappings.field_stopped_value") }}</th>
+        <th>{{ t("tag_mappings.field_alarm_value") }}</th>
+        <th>{{ t("tag_mappings.usage_column") }}</th>
         <th></th>
       </tr>
     </thead>
@@ -16,31 +16,31 @@
       <tr>
         <td><code>{{ m.tag_id }}</code></td>
         <td>{{ m.api_field }}</td>
-        <td>{{ m.running_value or "—" }}</td>
-        <td>{{ m.stopped_value or "—" }}</td>
-        <td>{{ m.alarm_value or "—" }}</td>
+        <td>{{ m.running_value or t("common.none_value") }}</td>
+        <td>{{ m.stopped_value or t("common.none_value") }}</td>
+        <td>{{ m.alarm_value or t("common.none_value") }}</td>
         <td class="tag-mapping-table__usage">
           {% if tag_usage.get(m.tag_id) %}
           {{ tag_usage.get(m.tag_id) | join(", ") }}
           {% else %}
-          <span class="tag-mapping-table__unused">未使用</span>
+          <span class="tag-mapping-table__unused">{{ t("common.unused") }}</span>
           {% endif %}
         </td>
         <td class="tag-mapping-table__actions">
           <button type="button" class="btn btn--sm"
                   hx-get="/ui/tag-mappings/{{ m.tag_id }}/edit"
                   hx-target="#tag-mapping-form-wrap"
-                  hx-swap="innerHTML">編集</button>
+                  hx-swap="innerHTML">{{ t("common.edit") }}</button>
           <button type="button" class="btn btn--sm btn--danger"
                   hx-delete="/ui/tag-mappings/{{ m.tag_id }}"
                   hx-target="#tag-mapping-table-wrap"
                   hx-swap="outerHTML"
-                  hx-confirm="「{{ m.tag_id }}」のマッピングを削除しますか?">削除</button>
+                  hx-confirm="{{ t('tag_mappings.delete_confirm', tag_id=m.tag_id) }}">{{ t("common.delete") }}</button>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" class="tag-mapping-table__empty">マッピングが登録されていません。</td>
+        <td colspan="7" class="tag-mapping-table__empty">{{ t("tag_mappings.empty") }}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -1,36 +1,36 @@
 {% extends "base.html" %}
-{% block title %}{{ "新規キャンバス" if is_new else layout.layout.name }} 編集 - EQ Dashboard{% endblock %}
-{% block page_title %}レイアウト編集{% endblock %}
+{% block title %}{{ t("layout_editor.title_new") if is_new else layout.layout.name }} {{ t("layout_editor.title_suffix") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("nav.layout_editor") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>{{ "新規キャンバス" if is_new else layout.layout.name + " を編集" }}</h1>
-    <p>装置図形をドラッグで配置・リサイズし、稼働状態のタグと紐づけます。編集内容はサーバーへ保存、またはJSONとしてダウンロードできます。IDを変更すると、そのキャンバスをリネームします(既存の別キャンバスと同じIDにする場合は上書き確認が表示されます)。</p>
+    <h1>{{ t("layout_editor.title_new") if is_new else layout.layout.name + " " + t("layout_editor.heading_edit_suffix") }}</h1>
+    <p>{{ t("layout_editor.description") }}</p>
   </div>
-  <a class="btn-link" href="/ui/layouts">← キャンバス一覧へ</a>
+  <a class="btn-link" href="/ui/layouts">{{ t("nav.back_to_layouts") }}</a>
 </div>
 
 <div class="dashboard-toolbar">
   <label class="toolbar-field">
-    <span>ID</span>
+    <span>{{ t("layout_editor.field_id") }}</span>
     <input type="text" id="meta-id" value="{{ layout.layout.id }}" placeholder="line-a">
   </label>
   <label class="toolbar-field">
-    <span>名前</span>
-    <input type="text" id="meta-name" value="{{ layout.layout.name }}" placeholder="1F 組立ライン">
+    <span>{{ t("layout_editor.field_name") }}</span>
+    <input type="text" id="meta-name" value="{{ layout.layout.name }}" placeholder="{{ t('layout_editor.field_name_placeholder') }}">
   </label>
   <label class="toolbar-field">
-    <span>幅</span>
+    <span>{{ t("layout_editor.field_width") }}</span>
     <input type="number" id="meta-width" min="100" step="10" value="{{ layout.layout.width }}">
   </label>
   <label class="toolbar-field">
-    <span>高さ</span>
+    <span>{{ t("layout_editor.field_height") }}</span>
     <input type="number" id="meta-height" min="100" step="10" value="{{ layout.layout.height }}">
   </label>
-  <button type="button" id="add-item-btn" class="btn">＋ 装置を追加</button>
-  <button type="button" id="save-btn" class="btn btn--accent">サーバーへ保存</button>
-  <button type="button" id="download-btn" class="btn">JSONをダウンロード</button>
-  <span class="badge" id="editor-status">{{ layout.items|length }}件の装置</span>
+  <button type="button" id="add-item-btn" class="btn">{{ t("layout_editor.add_item") }}</button>
+  <button type="button" id="save-btn" class="btn btn--accent">{{ t("layout_editor.save_to_server") }}</button>
+  <button type="button" id="download-btn" class="btn">{{ t("layout_editor.download_json") }}</button>
+  <span class="badge" id="editor-status">{{ t("layout_editor.item_count", count=layout.items|length) }}</span>
   <span class="editor-save-message" id="save-message"></span>
 </div>
 
@@ -39,17 +39,17 @@
     <div id="editor-canvas" class="dashboard-canvas"></div>
   </div>
   <aside class="editor-panel">
-    <p class="editor-panel__empty" id="editor-panel-empty">装置をクリックすると編集できます。</p>
+    <p class="editor-panel__empty" id="editor-panel-empty">{{ t("layout_editor.panel_empty") }}</p>
     <div class="editor-panel__form" id="editor-panel-form" hidden>
-      <label>ラベル<input type="text" id="item-label"></label>
-      <label>タグID<input type="text" id="item-tag-id"></label>
+      <label>{{ t("layout_editor.field_label") }}<input type="text" id="item-label"></label>
+      <label>{{ t("layout_editor.field_tag_id") }}<input type="text" id="item-tag-id"></label>
       <div class="editor-panel__grid">
-        <label>X<input type="number" id="item-x"></label>
-        <label>Y<input type="number" id="item-y"></label>
-        <label>幅<input type="number" id="item-w" min="10"></label>
-        <label>高さ<input type="number" id="item-h" min="10"></label>
+        <label>{{ t("layout_editor.field_x") }}<input type="number" id="item-x"></label>
+        <label>{{ t("layout_editor.field_y") }}<input type="number" id="item-y"></label>
+        <label>{{ t("layout_editor.field_w") }}<input type="number" id="item-w" min="10"></label>
+        <label>{{ t("layout_editor.field_h") }}<input type="number" id="item-h" min="10"></label>
       </div>
-      <button type="button" id="delete-item-btn" class="btn btn--danger">この装置を削除</button>
+      <button type="button" id="delete-item-btn" class="btn btn--danger">{{ t("layout_editor.delete_item") }}</button>
     </div>
   </aside>
 </div>

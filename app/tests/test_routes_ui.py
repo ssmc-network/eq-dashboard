@@ -135,6 +135,7 @@ def test_settings_save_sets_cookies(client: TestClient, sample_layout: dict) -> 
         "/ui/settings",
         data={
             "theme": "dark",
+            "language": "en",
             "operation_mode": "offline",
             "default_layout_id": "line-a",
             "default_refresh_interval": "30",
@@ -144,5 +145,32 @@ def test_settings_save_sets_cookies(client: TestClient, sample_layout: dict) -> 
 
     assert response.status_code == 303
     assert response.cookies["theme"] == "dark"
+    assert response.cookies["language"] == "en"
     assert response.cookies["default_layout_id"] == "line-a"
     assert response.cookies["default_refresh_interval"] == "30"
+
+
+def test_settings_save_rejects_invalid_language(client: TestClient, sample_layout: dict) -> None:
+    response = client.post(
+        "/ui/settings",
+        data={
+            "theme": "system",
+            "language": "fr",
+            "operation_mode": "offline",
+            "default_layout_id": "line-a",
+            "default_refresh_interval": "30",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.cookies["language"] == "ja"
+
+
+def test_dashboard_renders_in_english_when_language_cookie_set(client: TestClient, sample_layout: dict) -> None:
+    client.cookies.set("language", "en")
+
+    response = client.get("/ui/dashboard/line-a")
+
+    assert response.status_code == 200
+    assert "Dashboard" in response.text
+    assert "ダッシュボード" not in response.text

@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}タグマッピング - EQ Dashboard{% endblock %}
-{% block page_title %}タグマッピング{% endblock %}
+{% block title %}{{ t("tag_mappings.title") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("tag_mappings.title") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>タグマッピング</h1>
-    <p>外部APIのレスポンス項目名と内部タグ(tagId)、稼働中/停止中/アラームそれぞれに対応する生値を紐づけます。オンラインモードでバックエンドAPIと接続する際にこの対応表を使用します。</p>
+    <h1>{{ t("tag_mappings.title") }}</h1>
+    <p>{{ t("tag_mappings.description") }}</p>
   </div>
-  <a class="btn-link" href="/ui/settings">← システム設定へ</a>
+  <a class="btn-link" href="/ui/settings">{{ t("nav.back_to_settings") }}</a>
 </div>
 
 <div class="card">

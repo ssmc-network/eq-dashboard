@@ -3,7 +3,7 @@
         hx-post="{{ ('/ui/tag-mappings/' + mapping.tag_id) if editing else '/ui/tag-mappings' }}"
         hx-target="#tag-mapping-form-wrap"
         hx-swap="innerHTML">
-    <h3>{{ "マッピングを編集" if editing else "マッピングを追加" }}</h3>
+    <h3>{{ t("tag_mappings.form_edit_title") if editing else t("tag_mappings.form_add_title") }}</h3>
     {% if error %}
     <p class="tag-mapping-form__error">{{ error }}</p>
     {% endif %}
@@ -11,28 +11,28 @@
       <input type="text" name="tag_id" value="{{ mapping.tag_id if mapping else '' }}"
              placeholder="run_state_a" {% if editing %}readonly{% endif %} required>
     </label>
-    <label>APIフィールド
+    <label>{{ t("tag_mappings.field_api_field") }}
       <input type="text" name="api_field" value="{{ mapping.api_field if mapping else '' }}"
              placeholder="line_a.transport_a.run_state" required>
     </label>
     <div class="tag-mapping-form__grid">
-      <label>稼働中の値
+      <label>{{ t("tag_mappings.field_running_value") }}
         <input type="text" name="running_value" value="{{ mapping.running_value if mapping else '' }}" placeholder="1">
       </label>
-      <label>停止中の値
+      <label>{{ t("tag_mappings.field_stopped_value") }}
         <input type="text" name="stopped_value" value="{{ mapping.stopped_value if mapping else '' }}" placeholder="0">
       </label>
-      <label>アラームの値
+      <label>{{ t("tag_mappings.field_alarm_value") }}
         <input type="text" name="alarm_value" value="{{ mapping.alarm_value if mapping else '' }}" placeholder="9">
       </label>
     </div>
     <div class="tag-mapping-form__actions">
-      <button type="submit" class="btn btn--accent">{{ "更新" if editing else "追加" }}</button>
+      <button type="submit" class="btn btn--accent">{{ t("tag_mappings.update") if editing else t("tag_mappings.add") }}</button>
       {% if editing %}
       <button type="button" class="btn"
               hx-get="/ui/tag-mappings/new"
               hx-target="#tag-mapping-form-wrap"
-              hx-swap="innerHTML">キャンセル</button>
+              hx-swap="innerHTML">{{ t("common.cancel") }}</button>
       {% endif %}
     </div>
   </form>

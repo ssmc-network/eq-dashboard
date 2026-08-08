@@ -1,16 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from core.i18n import DEFAULT_LANGUAGE, translate
 from core.log_modules import log_application
 from providers.json_status_provider import JsonStatusProvider
 from schemas.layout import LayoutDefinition
 from schemas.status import StatusSnapshot
 from services.layout_service import get_layout
 
-STATUS_LABELS = {
-    "running": "稼働中",
-    "stopped": "停止中",
-    "alarm": "アラーム",
+STATUS_KEYS = {
+    "running": "status.running",
+    "stopped": "status.stopped",
+    "alarm": "status.alarm",
+    "unknown": "status.unknown",
 }
 
 _provider = JsonStatusProvider()
@@ -30,7 +32,7 @@ class DashboardBox:
     updated_at: datetime
 
 
-def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]:
+def get_dashboard(layout_id: str, lang: str = DEFAULT_LANGUAGE) -> tuple[LayoutDefinition, list[DashboardBox]]:
     layout = get_layout(layout_id)
     status = _provider.load_status()
     status_by_tag = {s.tag_id: s for s in status.statuses}
@@ -40,6 +42,7 @@ def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]
         matched = status_by_tag.get(item.tag_id)
         value = matched.value if matched else "unknown"
         updated_at = matched.updated_at if matched else status.generated_at
+        key = STATUS_KEYS.get(value)
         boxes.append(
             DashboardBox(
                 id=item.id,
@@ -49,7 +52,7 @@ def get_dashboard(layout_id: str) -> tuple[LayoutDefinition, list[DashboardBox]]
                 w=item.w,
                 h=item.h,
                 status_value=value,
-                status_label=STATUS_LABELS.get(value, value),
+                status_label=translate(key, lang) if key else value,
                 updated_at=updated_at,
             )
         )
