@@ -2,15 +2,15 @@
 <div class="import-result import-result--ok">
   <p class="import-result__title">
     {% if layout %}
-    ✓ キャンバス「{{ layout.layout.name }}」({{ layout.layout.id }})を{{ "上書き保存" if was_existing else "新規作成" }}しました。
+    {{ t("import_result.layout_saved_overwrite", name=layout.layout.name, id=layout.layout.id) if was_existing else t("import_result.layout_saved_new", name=layout.layout.name, id=layout.layout.id) }}
     {% else %}
-    ✓ 状態JSON(status.json)をサーバーに上書き保存しました。({{ status.statuses|length }}件)
+    {{ t("import_result.status_saved", count=status.statuses|length) }}
     {% endif %}
   </p>
 </div>
 {% elif result.ok %}
 <div class="import-result import-result--ok">
-  <p class="import-result__title">✓ {{ filename }} は正しい{{ kind }}JSONです。</p>
+  <p class="import-result__title">{{ t("import_result.valid_json", filename=filename, kind=t("import_result.kind_" + kind)) }}</p>
   <dl class="import-result__summary">
     {% for key, value in result.summary.items() %}
     <div>
@@ -23,19 +23,19 @@
   <form class="import-confirm" hx-post="{{ confirm_url }}" hx-target="closest .import-result" hx-swap="outerHTML">
     <input type="hidden" name="raw_json" value="{{ raw_json }}">
     <p class="import-confirm__notice">
-      {% if kind == "レイアウト" %}
-      id <code>{{ result.summary.id }}</code> は{{ "既存のキャンバスです。上書きされます。" if exists else "新規キャンバスとして作成されます。" }}
+      {% if kind == "layout" %}
+      {{ t("import_result.layout_exists_notice", id=result.summary.id) if exists else t("import_result.layout_new_notice", id=result.summary.id) }}
       {% else %}
-      サーバー上の status.json({{ result.summary.statusCount }}件)を上書きします。
+      {{ t("import_result.status_overwrite_notice", count=result.summary.statusCount) }}
       {% endif %}
     </p>
-    <button type="submit" class="btn btn--accent">この内容で保存</button>
+    <button type="submit" class="btn btn--accent">{{ t("import_result.confirm_save") }}</button>
   </form>
   {% endif %}
 </div>
 {% else %}
 <div class="import-result import-result--error">
-  <p class="import-result__title">✕ {{ filename }} は無効な{{ kind }}JSONです。</p>
+  <p class="import-result__title">{{ t("import_result.invalid_json", filename=filename, kind=t("import_result.kind_" + kind)) }}</p>
   <ul class="import-result__errors">
     {% for err in result.errors %}
     <li>{{ err }}</li>

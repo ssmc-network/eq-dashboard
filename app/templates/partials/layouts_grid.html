@@ -10,12 +10,12 @@
             hx-delete="/ui/layouts/{{ meta.id }}"
             hx-target="#layouts-grid"
             hx-swap="outerHTML"
-            hx-confirm="キャンバス「{{ meta.name }}」を削除しますか?この操作は取り消せません。">削除</button>
+            hx-confirm="{{ t('layouts_list.delete_confirm', name=meta.name) }}">{{ t("common.delete") }}</button>
   </div>
   {% endfor %}
   <a class="nav-card" href="/ui/layouts/new">
     <span class="nav-card__icon">＋</span>
-    <span class="nav-card__title">新規キャンバス</span>
-    <span class="nav-card__desc">空のキャンバスを新しく作成します。</span>
+    <span class="nav-card__title">{{ t("layouts_list.new_canvas") }}</span>
+    <span class="nav-card__desc">{{ t("layouts_list.new_canvas_desc") }}</span>
   </a>
 </div>

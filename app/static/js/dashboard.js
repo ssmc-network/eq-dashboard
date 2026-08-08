@@ -31,9 +31,9 @@
 
     if (isOn) {
       timerId = setInterval(refreshOnce, interval * 1000);
-      statusEl.textContent = `${interval}秒ごとに更新`;
+      statusEl.textContent = t("dashboard.refresh_status_on", { interval });
     } else {
-      statusEl.textContent = "自動更新なし";
+      statusEl.textContent = t("dashboard.refresh_status_off");
     }
   }
 

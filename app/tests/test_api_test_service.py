@@ -48,6 +48,15 @@ def test_connection_auth_failure(mock_async_client: AsyncMock) -> None:
     assert "認証" in result.message
 
 
+def test_connection_auth_failure_translated_to_english(mock_async_client: AsyncMock) -> None:
+    mock_async_client.get.return_value = _mock_response(401)
+
+    result = asyncio.run(run_connection_test(ApiConfig(baseUrl="http://example.com"), "en"))
+
+    assert not result.ok
+    assert "Authentication failed" in result.message
+
+
 def test_connection_error_response(mock_async_client: AsyncMock) -> None:
     mock_async_client.get.return_value = _mock_response(500)
 

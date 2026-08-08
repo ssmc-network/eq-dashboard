@@ -1,44 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Online設定 - EQ Dashboard{% endblock %}
-{% block page_title %}Online設定{% endblock %}
+{% block title %}{{ t("api_settings.title") }} - {{ t("app.name") }}{% endblock %}
+{% block page_title %}{{ t("api_settings.title") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1>Online設定</h1>
-    <p>オンラインモードで使用するマスターAPIの接続先、認証方式を管理します。</p>
+    <h1>{{ t("api_settings.title") }}</h1>
+    <p>{{ t("api_settings.description") }}</p>
   </div>
-  <a class="btn-link" href="/ui/settings">← システム設定へ</a>
+  <a class="btn-link" href="/ui/settings">{{ t("nav.back_to_settings") }}</a>
 </div>
 
 <div class="card">
-  <span class="badge">現在の動作モード: {{ "オンライン" if operation_mode == "online" else "オフライン" }}</span>
+  <span class="badge">{{ t("api_settings.current_mode", mode=t("settings.operation_mode_online") if operation_mode == "online" else t("settings.operation_mode_offline")) }}</span>
 
   <form class="api-config-form" method="post" action="/ui/api-sources">
-    <label>接続先URL
+    <label>{{ t("api_settings.base_url_label") }}
       <input type="text" name="base_url" value="{{ config.base_url }}" placeholder="https://api.example.com">
     </label>
 
     <fieldset class="auth-type-field">
-      <legend>認証方式</legend>
-      <label><input type="radio" name="auth_type" value="none" {% if config.auth_type == "none" %}checked{% endif %}> なし</label>
-      <label><input type="radio" name="auth_type" value="api_key" {% if config.auth_type == "api_key" %}checked{% endif %}> APIキー</label>
-      <label><input type="radio" name="auth_type" value="bearer" {% if config.auth_type == "bearer" %}checked{% endif %}> Bearerトークン</label>
+      <legend>{{ t("api_settings.auth_type_label") }}</legend>
+      <label><input type="radio" name="auth_type" value="none" {% if config.auth_type == "none" %}checked{% endif %}> {{ t("api_settings.auth_none") }}</label>
+      <label><input type="radio" name="auth_type" value="api_key" {% if config.auth_type == "api_key" %}checked{% endif %}> {{ t("api_settings.auth_api_key") }}</label>
+      <label><input type="radio" name="auth_type" value="bearer" {% if config.auth_type == "bearer" %}checked{% endif %}> {{ t("api_settings.auth_bearer") }}</label>
     </fieldset>
 
-    <label>APIキーのヘッダー名
+    <label>{{ t("api_settings.api_key_header_label") }}
       <input type="text" name="api_key_header" value="{{ config.api_key_header }}" placeholder="X-API-Key">
     </label>
-    <label>APIキー / トークン
+    <label>{{ t("api_settings.credential_label") }}
       <input type="password" name="credential" value="{{ config.credential }}" placeholder="••••••••" autocomplete="off">
     </label>
 
     <div class="api-config-form__actions">
-      <button type="submit" class="btn btn--accent">保存</button>
+      <button type="submit" class="btn btn--accent">{{ t("common.save") }}</button>
       <button type="button" class="btn"
               hx-post="/ui/api-sources/test"
               hx-include="closest form"
               hx-target="#api-test-result"
-              hx-swap="innerHTML">接続テスト</button>
+              hx-swap="innerHTML">{{ t("api_settings.test_connection") }}</button>
     </div>
   </form>
 

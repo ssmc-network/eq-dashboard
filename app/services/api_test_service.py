@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 import httpx
 
+from core.i18n import DEFAULT_LANGUAGE, translate
 from core.log_modules import log_application
 from schemas.api_config import ApiConfig
 
@@ -28,9 +29,9 @@ def _build_headers(config: ApiConfig) -> dict[str, str]:
     return {}
 
 
-async def test_connection(config: ApiConfig) -> ApiTestResult:
+async def test_connection(config: ApiConfig, lang: str = DEFAULT_LANGUAGE) -> ApiTestResult:
     if not config.base_url:
-        result = ApiTestResult(ok=False, message="接続先URLが設定されていません。")
+        result = ApiTestResult(ok=False, message=translate("api_test.base_url_missing", lang))
         _log_result(config, result)
         return result
 
@@ -40,11 +41,11 @@ async def test_connection(config: ApiConfig) -> ApiTestResult:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
             response = await client.get(config.base_url, headers=headers)
     except httpx.TimeoutException:
-        result = ApiTestResult(ok=False, message="接続がタイムアウトしました。")
+        result = ApiTestResult(ok=False, message=translate("api_test.timeout", lang))
         _log_result(config, result)
         return result
     except httpx.RequestError as exc:
-        result = ApiTestResult(ok=False, message=f"接続に失敗しました: {exc}")
+        result = ApiTestResult(ok=False, message=translate("api_test.connection_failed", lang, error=exc))
         _log_result(config, result)
         return result
 
@@ -53,21 +54,21 @@ async def test_connection(config: ApiConfig) -> ApiTestResult:
     if response.status_code in (401, 403):
         result = ApiTestResult(
             ok=False,
-            message=f"認証に失敗しました(HTTP {response.status_code})。",
+            message=translate("api_test.auth_failed", lang, status=response.status_code),
             status_code=response.status_code,
             elapsed_ms=elapsed_ms,
         )
     elif response.status_code >= HTTP_ERROR_THRESHOLD:
         result = ApiTestResult(
             ok=False,
-            message=f"接続はできましたが、エラー応答でした(HTTP {response.status_code})。",
+            message=translate("api_test.error_response", lang, status=response.status_code),
             status_code=response.status_code,
             elapsed_ms=elapsed_ms,
         )
     else:
         result = ApiTestResult(
             ok=True,
-            message=f"接続に成功しました(HTTP {response.status_code}, {elapsed_ms}ms)。",
+            message=translate("api_test.success", lang, status=response.status_code, elapsed=elapsed_ms),
             status_code=response.status_code,
             elapsed_ms=elapsed_ms,
         )
