@@ -54,6 +54,7 @@
     state.items.forEach((item) => {
       const box = document.createElement("div");
       box.className = "eq-editable-box" + (item.id === selectedId ? " is-selected" : "");
+      box.dataset.itemId = item.id;
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
       box.style.width = `${item.w}px`;
@@ -75,13 +76,23 @@
     });
   }
 
+  // ドラッグ/リサイズ中に握っているbox要素をrenderItems()のinnerHTML再構築で
+  // 差し替えてしまうと、以後のstyle更新がDOMから外れた古い要素に対して行われ
+  // 画面に反映されなくなる(次のクリックで再描画されるまで追従して見えない不具合の原因)。
+  // 選択状態の切り替えはDOMを作り直さず、クラスの付け替えだけで済ませる。
+  function highlightSelection() {
+    canvas.querySelectorAll(".eq-editable-box").forEach((box) => {
+      box.classList.toggle("is-selected", box.dataset.itemId === selectedId);
+    });
+  }
+
   function select(id) {
     selectedId = id;
     const item = findItem(id);
     if (!item) {
       panelEmpty.hidden = false;
       panelForm.hidden = true;
-      renderItems();
+      highlightSelection();
       return;
     }
     panelEmpty.hidden = true;
@@ -92,7 +103,7 @@
     fieldY.value = item.y;
     fieldW.value = item.w;
     fieldH.value = item.h;
-    renderItems();
+    highlightSelection();
   }
 
   function startDrag(e, item, box) {
@@ -175,6 +186,8 @@
   deleteBtn.addEventListener("click", () => {
     state.items = state.items.filter((it) => it.id !== selectedId);
     renderStatus();
+    selectedId = null;
+    renderItems();
     select(null);
   });
 
@@ -182,6 +195,8 @@
     const id = `item-${nextSeq++}`;
     state.items.push({ id, label: "新規装置", x: 40, y: 40, w: 120, h: 80, tagId: "" });
     renderStatus();
+    selectedId = id;
+    renderItems();
     select(id);
   });
 
