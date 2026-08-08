@@ -37,6 +37,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "dashboard.updated_at_label": {"ja": "更新", "en": "Updated"},
     "dashboard.fullscreen_enter": {"ja": "全画面表示", "en": "Fullscreen"},
     "dashboard.fullscreen_exit": {"ja": "全画面終了", "en": "Exit Fullscreen"},
+    "dashboard.fallback_notice": {
+        "ja": "指定されたキャンバス「{requested}」が見つからなかったため、代わりに「{shown}」を表示しています。",
+        "en": 'Canvas "{requested}" could not be found, showing "{shown}" instead.',
+    },
     # 装置ステータス
     "status.running": {"ja": "稼働中", "en": "Running"},
     "status.stopped": {"ja": "停止中", "en": "Stopped"},
