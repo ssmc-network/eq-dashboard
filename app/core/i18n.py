@@ -173,6 +173,31 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "ja": "接続に成功しました(HTTP {status}, {elapsed}ms)。",
         "en": "Connection succeeded (HTTP {status}, {elapsed}ms).",
     },
+    # タグマッピング(APIから取得して作成)
+    "api_discovery.invalid_json": {
+        "ja": "レスポンスがJSON形式ではありません。",
+        "en": "The response is not valid JSON.",
+    },
+    "api_discovery.no_fields": {
+        "ja": "取得したデータから項目が見つかりませんでした。",
+        "en": "No fields were found in the retrieved data.",
+    },
+    "api_discovery.section_title": {"ja": "APIから取得して作成", "en": "Create from API Data"},
+    "api_discovery.section_desc": {
+        "ja": "Online設定に保存された接続先へアクセスし、取得できた項目から複数のマッピングをまとめて作成します。",
+        "en": "Connects to the endpoint saved in Online Settings and bulk-creates mappings from the fields found.",
+    },
+    "api_discovery.fetch_button": {"ja": "APIから取得", "en": "Fetch from API"},
+    "api_discovery.sample_value_column": {"ja": "サンプル値", "en": "Sample Value"},
+    "api_discovery.create_selected": {"ja": "選択した項目からマッピングを作成", "en": "Create Mappings from Selected"},
+    "api_discovery.truncated_notice": {
+        "ja": "項目数が多いため、先頭{limit}件のみ表示しています。",
+        "en": "Showing only the first {limit} fields because there were too many.",
+    },
+    "api_discovery.bulk_result": {
+        "ja": "{created}件作成しました({skipped}件は既存のためスキップ)。",
+        "en": "Created {created} mapping(s) ({skipped} skipped as already existing).",
+    },
     # タグマッピング
     "tag_mappings.title": {"ja": "タグマッピング", "en": "Tag Mapping"},
     "tag_mappings.description": {

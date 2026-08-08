@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from repositories.api_config_repository import ApiConfigRepository
 from schemas.layout import LayoutDefinition
+from services.api_discovery_service import DiscoveredField, DiscoverFieldsResult
 from services.layout_service import save_layout
 from tests.conftest import IsolatedPaths
 
@@ -104,6 +105,54 @@ def test_tag_mapping_create_duplicate_shows_error(client: TestClient, isolated_p
 
     assert response.status_code == 200
     assert "既に登録されています" in response.text
+
+
+def test_tag_mappings_discover_shows_fetched_fields(client: TestClient, isolated_provider: IsolatedPaths) -> None:
+    field = DiscoveredField(path="line_a.transport_a.run_state", value="1")
+    fake_result = DiscoverFieldsResult(ok=True, fields=[field])
+    with patch("routes.ui.discover_fields", AsyncMock(return_value=fake_result)):
+        response = client.post("/ui/tag-mappings/discover")
+
+    assert response.status_code == 200
+    assert "line_a.transport_a.run_state" in response.text
+
+
+def test_tag_mappings_discover_shows_error_message(client: TestClient, isolated_provider: IsolatedPaths) -> None:
+    fake_result = DiscoverFieldsResult(ok=False, message="接続先URLが設定されていません。")
+    with patch("routes.ui.discover_fields", AsyncMock(return_value=fake_result)):
+        response = client.post("/ui/tag-mappings/discover")
+
+    assert response.status_code == 200
+    assert "接続先URLが設定されていません。" in response.text
+
+
+def test_tag_mappings_bulk_create_creates_selected_mappings(
+    client: TestClient, isolated_provider: IsolatedPaths
+) -> None:
+    response = client.post(
+        "/ui/tag-mappings/bulk-create",
+        data={"selected_paths": ["line_a.transport_a.run_state", "line_a.press_b.run_state"]},
+    )
+
+    assert response.status_code == 200
+    assert "line_a_transport_a_run_state" in response.text
+    assert "line_a_press_b_run_state" in response.text
+    assert "line_a.transport_a.run_state" in response.text
+
+
+def test_tag_mappings_bulk_create_skips_already_registered_tag_id(
+    client: TestClient, isolated_provider: IsolatedPaths
+) -> None:
+    client.post("/ui/tag-mappings", data={"tag_id": "line_a_transport_a_run_state", "api_field": "manual"})
+
+    response = client.post(
+        "/ui/tag-mappings/bulk-create",
+        data={"selected_paths": ["line_a.transport_a.run_state"]},
+    )
+
+    assert response.status_code == 200
+    assert "0件作成" in response.text
+    assert "1件は既存のためスキップ" in response.text
 
 
 def test_tag_mapping_update(client: TestClient, isolated_provider: IsolatedPaths) -> None:
