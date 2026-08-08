@@ -4,6 +4,8 @@ import httpx
 from fastapi.testclient import TestClient
 
 from repositories.api_config_repository import ApiConfigRepository
+from schemas.layout import LayoutDefinition
+from services.layout_service import save_layout
 from tests.conftest import IsolatedPaths
 
 
@@ -18,6 +20,33 @@ def test_dashboard_404_for_unknown_layout(client: TestClient, isolated_provider:
     response = client.get("/ui/dashboard/does-not-exist")
 
     assert response.status_code == 404
+
+
+def test_dashboard_falls_back_to_another_canvas_when_requested_one_is_missing(
+    client: TestClient, sample_layout: dict
+) -> None:
+    save_layout(
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "room-b", "name": "Room B", "width": 400, "height": 300},
+                "items": [],
+            }
+        )
+    )
+
+    response = client.get("/ui/dashboard/does-not-exist")
+
+    assert response.status_code == 200
+    assert "does-not-exist" in response.text
+    assert "Line A" in response.text or "Room B" in response.text
+
+
+def test_dashboard_shows_no_fallback_notice_for_existing_layout(client: TestClient, sample_layout: dict) -> None:
+    response = client.get("/ui/dashboard/line-a")
+
+    assert response.status_code == 200
+    assert "dashboard-fallback-notice" not in response.text
 
 
 def test_dashboard_has_fullscreen_button(client: TestClient, sample_layout: dict) -> None:

@@ -61,15 +61,27 @@ async def dashboard_default(request: Request) -> RedirectResponse:
 
 @router.get("/ui/dashboard/{layout_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, layout_id: str) -> HTMLResponse:
-    layout, boxes = _load_dashboard(layout_id, get_language(request))
+    lang = get_language(request)
+    layouts = list_layouts()
+    resolved_id, fallback_from = _resolve_dashboard_layout_id(layout_id, layouts)
+    if resolved_id is None:
+        raise HTTPException(status_code=404, detail="layout not found")
+
+    layout, boxes = get_dashboard(resolved_id, lang)
+    fallback_notice = (
+        translate("dashboard.fallback_notice", lang, requested=fallback_from, shown=layout.layout.name)
+        if fallback_from
+        else None
+    )
     return templates.TemplateResponse(
         request,
         "pages/dashboard.html",
         {
             "layout": layout,
             "boxes": boxes,
-            "available_layouts": list_layouts(),
+            "available_layouts": layouts,
             "default_refresh_interval": _get_default_refresh_interval(request),
+            "fallback_notice": fallback_notice,
         },
     )
 
@@ -483,6 +495,18 @@ def _load_dashboard(layout_id: str, lang: str) -> tuple[LayoutDefinition, list[D
         return get_dashboard(layout_id, lang)
     except LayoutNotFoundError as exc:
         raise HTTPException(status_code=404, detail="layout not found") from exc
+
+
+def _resolve_dashboard_layout_id(layout_id: str, layouts: list[LayoutMeta]) -> tuple[str | None, str | None]:
+    """指定idのキャンバスが存在すればそのまま返す。存在しない場合(リネーム/削除された
+    デフォルトキャンバスなど)は、他に表示できるキャンバスがあればその1件目にフォール
+    バックする(戻り値の2番目の要素に元のidを入れ、呼び出し元で案内メッセージを出す)。
+    表示できるキャンバスが1件も無ければ(None, None)を返し、404にする。"""
+    if any(meta.id == layout_id for meta in layouts):
+        return layout_id, None
+    if layouts:
+        return layouts[0].id, layout_id
+    return None, None
 
 
 def _serialize_layout(layout: LayoutDefinition) -> str:

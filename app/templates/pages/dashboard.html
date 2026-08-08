@@ -2,6 +2,11 @@
 {% block title %}{{ t("dashboard.title") }} - {{ t("app.name") }}{% endblock %}
 {% block page_title %}{{ t("dashboard.title") }}{% endblock %}
 {% block content %}
+{% if fallback_notice %}
+<div class="dashboard-fallback-notice">
+  <p>{{ fallback_notice }}</p>
+</div>
+{% endif %}
 <div class="page-header">
   <div>
     <h1>{{ layout.layout.name }}</h1>

@@ -1203,3 +1203,17 @@ button {
 .inline-error p {
   margin: 0;
 }
+
+.dashboard-fallback-notice {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.82rem;
+  color: var(--accent-strong);
+}
+
+.dashboard-fallback-notice p {
+  margin: 0;
+}
