@@ -47,4 +47,56 @@
       window.location.href = `/ui/dashboard/${layoutSwitcher.value}`;
     });
   }
+
+  const fullscreenBtn = document.getElementById("fullscreen-btn");
+  const fullscreenWrap = document.getElementById("dashboard-canvas-wrap");
+  const fullscreenExitBtn = document.getElementById("fullscreen-exit-btn");
+  if (fullscreenBtn && fullscreenWrap && fullscreenExitBtn) {
+    function isFullscreen() {
+      return document.fullscreenElement === fullscreenWrap;
+    }
+
+    // transformは#dashboard-items内の.dashboard-canvas(auto-refreshのたびに
+    // 作り直される)に適用するため、htmxのswap後も再計算が必要。
+    function applyFullscreenScale() {
+      const canvasEl = target.querySelector(".dashboard-canvas");
+      if (!canvasEl) return;
+      if (!isFullscreen()) {
+        canvasEl.style.transform = "";
+        return;
+      }
+      const scale = Math.min(window.innerWidth / canvasEl.offsetWidth, window.innerHeight / canvasEl.offsetHeight);
+      canvasEl.style.transform = `scale(${scale})`;
+    }
+
+    function enterFullscreen() {
+      fullscreenWrap.requestFullscreen();
+    }
+
+    function exitFullscreen() {
+      document.exitFullscreen();
+    }
+
+    fullscreenBtn.addEventListener("click", () => {
+      if (isFullscreen()) {
+        exitFullscreen();
+      } else {
+        enterFullscreen();
+      }
+    });
+    // ツールバーのボタンはfullscreenWrapの外にあり、全画面中はブラウザに
+    // よって非表示になるため、fullscreenWrap内部にも終了ボタンを置く。
+    fullscreenExitBtn.addEventListener("click", exitFullscreen);
+
+    document.addEventListener("fullscreenchange", () => {
+      fullscreenBtn.textContent = isFullscreen() ? t("dashboard.fullscreen_exit") : t("dashboard.fullscreen_enter");
+      applyFullscreenScale();
+    });
+
+    window.addEventListener("resize", () => {
+      if (isFullscreen()) applyFullscreenScale();
+    });
+
+    target.addEventListener("htmx:afterSwap", applyFullscreenScale);
+  }
 })();
