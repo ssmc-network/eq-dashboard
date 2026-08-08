@@ -116,8 +116,8 @@
     const originY = item.y;
 
     function onMove(ev) {
-      item.x = Math.max(0, originX + (ev.clientX - startX));
-      item.y = Math.max(0, originY + (ev.clientY - startY));
+      item.x = Math.max(0, Math.round(originX + (ev.clientX - startX)));
+      item.y = Math.max(0, Math.round(originY + (ev.clientY - startY)));
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
       if (selectedId === item.id) {
@@ -145,8 +145,8 @@
     const originH = item.h;
 
     function onMove(ev) {
-      item.w = Math.max(20, originW + (ev.clientX - startX));
-      item.h = Math.max(20, originH + (ev.clientY - startY));
+      item.w = Math.max(20, Math.round(originW + (ev.clientX - startX)));
+      item.h = Math.max(20, Math.round(originH + (ev.clientY - startY)));
       box.style.width = `${item.w}px`;
       box.style.height = `${item.h}px`;
       if (selectedId === item.id) {
@@ -172,7 +172,7 @@
     el.addEventListener("input", () => {
       const item = findItem(selectedId);
       if (!item) return;
-      item[key] = isNumber ? Number(el.value) || 0 : el.value;
+      item[key] = isNumber ? Math.round(Number(el.value) || 0) : el.value;
       renderItems();
     });
   }
