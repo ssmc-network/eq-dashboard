@@ -31,6 +31,8 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd�
 
 composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
 
+**OpenShift上での書き込み権限**: `dev`/`prd`いずれの最終COPY直後にも `RUN chmod -R g+rwX .../app/data` を入れている。イメージは `COPY --chown=1001:0` でUID 1001・GID 0所有にしているが、OpenShiftの既定SCC(`restricted`)はコンテナを**ランダムなUID・GID 0**で起動するため、実行時のUIDはビルド時の1001と一致しない。ファイルのグループ書き込み権限(`g+rwX`)が無いと、`data/`配下へのファイル保存(レイアウト保存・タグマッピング編集など)が`PermissionError`で失敗する(読み取り専用の操作は権限不要なので気づきにくい)。docker-compose(通常のDocker)ではコンテナがイメージ通りのUID 1001で動くためこの問題は再現しない — OpenShift固有の制約。
+
 ## ブランチ運用とCI/CD
 
 **ブランチモデル**: `main`(保護ブランチ、直pushは不可) / `release/<バージョン>`(例: `release/1.0.0`) / 開発ブランチ(`feature/...`、`claude/...`など)の3層。

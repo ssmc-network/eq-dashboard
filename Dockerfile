@@ -55,6 +55,7 @@ RUN poetry install --no-root && \
     poetry cache clear pypi --all
 
 COPY --chown=1001:0 . /opt/app-root/src/project
+RUN chmod -R g+rwX /opt/app-root/src/project/app/data
 
 
 # ==========================================
@@ -63,6 +64,7 @@ COPY --chown=1001:0 . /opt/app-root/src/project
 FROM dependencies AS prd
 
 COPY --chown=1001:0 ./app /opt/app-root/src/project/app
+RUN chmod -R g+rwX /opt/app-root/src/project/app/data
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--log-config", "log_config.yaml"]
 EXPOSE 8000
