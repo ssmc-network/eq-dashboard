@@ -54,7 +54,7 @@ def test_dashboard_has_fullscreen_button(client: TestClient, sample_layout: dict
     response = client.get("/ui/dashboard/line-a")
 
     assert 'id="fullscreen-btn"' in response.text
-    assert 'id="fullscreen-exit-btn"' in response.text
+    assert 'id="fullscreen-exit-btn"' not in response.text
 
 
 def test_layout_editor_has_no_fullscreen_button(client: TestClient, sample_layout: dict) -> None:
