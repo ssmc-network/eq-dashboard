@@ -509,7 +509,12 @@ button {
    innerHTMLが差し替わる#dashboard-itemsそのものは対象にしない)。終了はブラウザ
    標準のEsc/ホバーで出る終了UIに任せ、独自の終了ボタンは置かない。
    中の.dashboard-canvasはJS側でscale()して画面いっぱいに拡大する
-   (位置決めは絶対座標のまま崩れない)。 */
+   (位置決めは絶対座標のまま崩れない)。overflowは通常時の`auto`(canvasが
+   ビューポートより大きい場合にスクロールできるようにするための設定)を
+   継承させない — transformは要素の見た目だけを縮小し、レイアウト上の
+   (縮小前の)サイズはそのまま子の overflow 計算に使われてしまうため、
+   `overflow: auto` のままだと画面解像度によっては使われないスクロールバー
+   が出てしまう。全画面中はscale()で必ず画面に収まる前提なので隠してよい。 */
 #dashboard-canvas-wrap:fullscreen {
   display: flex;
   align-items: center;
@@ -517,6 +522,7 @@ button {
   width: 100%;
   height: 100%;
   background: #ffffff;
+  overflow: hidden;
 }
 
 #dashboard-canvas-wrap:fullscreen .dashboard-canvas {
