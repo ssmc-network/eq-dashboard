@@ -22,7 +22,7 @@ poetry run mypy .              # 型チェック
 poetry run pytest              # テスト
 ```
 
-Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` →(`dev-dependencies`)→ `dev`/`prd`):
+Docker(UBI10ベースのマルチステージビルド: `base` → `dependencies` →(`dev-dependencies`)→ `dev`/`prd`):
 
 ```bash
 docker compose up -d                                            # devターゲット。compose.override.yaml を使用
@@ -30,6 +30,8 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd�
 ```
 
 composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
+
+**ベースイメージ(`ARG PYTHON_VERSION`)は`ubi9/python-312-minimal`から`ubi10/python-314-minimal`(タグ固定)に更新した** — 脆弱性スキャンの残り(critical/high計23件)がUBI9側のOSパッケージで上流未修正だったため、まずベースイメージ側の世代を上げてどれだけ解消するかを確認する狙い。Python 3.12→3.14はPEP 649(遅延アノテーション評価)を含むメジャーな変更で、`pydantic`はPEP 649対応済み(2.12.0以降、現在ロックされている2.13.4はさらに新しい)だが、このサンドボックスで検証に使えたPython 3.14ビルドはrc2(uvが提供する最新でも正式版が無かった)のみで、CPython側の既知の回帰(python/cpython#136316、フォワード参照のネスト評価。3.14ブランチには修正がバックポート済み)によりrc2上でのみpydanticがクラッシュする現象を確認している。正式版の3.14を使う実イメージでは再現しない可能性が高いため、実際の動作確認は(このサンドボックスにはUBI10レジストリへの経路も無く)CIでのビルド・テスト結果に委ねている。`pyproject.toml`の`python`制約も`>=3.10,<3.15`に広げて3.14を許容するようにした(下限はローカル開発機がまだ3.14でなくても動くよう維持)。
 
 **poetry自身は`dev`/`prd`イメージに含めない**: `dependencies`/`dev-dependencies`ステージで`pip install poetry`し`poetry install`するが、`POETRY_VIRTUALENVS_CREATE=true` + `POETRY_VIRTUALENVS_IN_PROJECT=true`により実際の依存関係は`poetry`自身とは別の`.venv`(プロジェクト内仮想環境)に入る。`dev`/`prd`ステージは`dependencies`から派生させず`base`から派生させ、`COPY --from=dependencies/dev-dependencies ... .venv .venv`で仮想環境の中身だけを引き継ぐ(`VIRTUAL_ENV`/`PATH`もこの`.venv`を指すよう、コピー先のdev/prdステージ側でのみ設定する — `.venv`が存在する前のステージでこれらを設定するとpoetryの仮想環境検出と衝突する可能性があるため)。以前は`POETRY_VIRTUALENVS_CREATE=false`でpoetryをアプリと同じPython環境に直接インストールしていたため、`prd`(本番)イメージにもpoetry自身とその依存(setuptools、dulwichなど)が同梱され、実際にDocker Scoutでそれらのfixed-version脆弱性(dulwichのWindows向けpath traversal RCE等)が検出された — ランタイムには不要なビルド専用ツールが本番の攻撃対象領域を不必要に広げていたのが原因。`dev-dependencies`は`dependencies`(prod依存のみの`.venv`)から派生し、devグループを追加インストールする形にしている(base依存の再インストールを避けるため)。
 

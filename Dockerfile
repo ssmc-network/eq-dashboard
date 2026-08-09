@@ -1,14 +1,14 @@
 # ==========================================
 # グローバル設定
 # ==========================================
-ARG PYTHON_VERSION=ubi9/python-312-minimal
+ARG PYTHON_VERSION=ubi10/python-314-minimal:1785806428
 ARG POETRY_VERSION=2.1.2
 
 
 # ==========================================
 # ベースイメージ
 # ==========================================
-FROM registry.access.redhat.com/${PYTHON_VERSION}:latest AS base
+FROM registry.access.redhat.com/${PYTHON_VERSION} AS base
 ARG HTTP_PROXY, HTTPS_PROXY
 WORKDIR /opt/app-root/src/project/app
 ENV PYTHONUNBUFFERED=1 \
