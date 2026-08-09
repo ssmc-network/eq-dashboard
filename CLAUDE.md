@@ -45,6 +45,8 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 `release/*` へのPRと `main` へのPRとでCIの役割を分けている(後述)。
 
+**Claude CodeはPRのマージを実施しないこと。** PR(開発ブランチ→`release/<バージョン>`、`release/<バージョン>`→`main`のいずれも)の作成はしてよいが、実際のマージ操作はユーザー側が行う。CIの確認・レビュー・不具合修正はこれまで通り主体的に行ってよいが、マージ自体は必ずユーザーの実施に委ねること。
+
 **CI(`.github/workflows/`)**:
 
 - `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` ディレクトリが無い場合のみスキップするガードが入っている)を実行する。続けて`prd`ターゲットもpushせずローカルビルドし(`load: true`)、Docker Scout(`docker scout cves`)で脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない。以前はTrivyを使っていたが検出対象がほぼ同じ機能の重複だったため一本化した — CLIでの`cves`コマンド自体はDocker Hubの無料プランで使え追加のライセンス費用は不要)。**この脆弱性スキャンは意図的に`main`マージ前(release/*へのPR時点)に置いている** — 以前は`build.yaml`側(mainへのpush後、Docker Hubへのpush後)でスキャンしていたが、それでは脆弱性があっても一度は公開されてから気づく形になってしまうため、mainマージ前に気づけるこの位置に移した。結果は`--only-severity critical,high`に絞ったMarkdownを`actions/github-script`で**そのPR自体への固定マーカー(`<!-- docker-scout-report -->`)付きコメント**として投稿し、再実行時は新規コメントを増やさず既存コメントを上書きする(medium/lowを含む全件は`docker-scout-report-pr-<PR番号>`という名前のArtifactとして90日保持)。PRコメントという形にしたのは、スキャン対象がその都度違うdev branchのPRごとに変わる(グローバルな「現在のリリース」という単一の状態ではない)ため、Claude Codeも人間も対象のPRを見ればそのまま結果が分かるようにする方が、リポジトリ全体で1件のIssueを使い回すより自然だからである(以前はbuild.yaml側で固定タイトルIssueを使い回す設計だったが、この位置移動に合わせてPRコメント方式に変更した)。Issue/PRコメントいずれも本文には65536文字の上限があり、全severity込みだと実際に超えて投稿が失敗した経緯があるため、severityで絞った上でさらに文字数でも防御的に切り詰めている。`on:`に`workflow_dispatch`も追加しており、対象の変更をPRとして起票せずに現在の脆弱性状況だけを確認したい場合に手動実行できる — この場合`context.issue.number`が存在しないためPRコメントへの投稿はスキップし(`context.eventName === 'pull_request'`で分岐)、結果はジョブの実行サマリー(`core.summary`)にのみ出力する。Artifact名(`docker-scout-report-pr-<PR番号 または run_id>`)もPR番号が無い手動実行時は`run_id`にフォールバックする。
