@@ -2,6 +2,7 @@ import io
 import json
 import zipfile
 from pathlib import Path
+from typing import cast
 
 import httpx
 from fastapi.testclient import TestClient
@@ -20,7 +21,7 @@ def _layout_payload(
 
 
 def _post_save(client: TestClient, payload: dict[str, object], **params: str) -> httpx.Response:
-    return client.post("/api/layouts/save", params=params, content=json.dumps(payload))
+    return cast(httpx.Response, client.post("/api/layouts/save", params=params, content=json.dumps(payload)))
 
 
 def test_save_new_layout_succeeds(client: TestClient, isolated_provider: IsolatedPaths) -> None:

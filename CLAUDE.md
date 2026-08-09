@@ -22,7 +22,7 @@ poetry run mypy .              # 型チェック
 poetry run pytest              # テスト
 ```
 
-Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` → `dev`/`prd`):
+Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` →(`dev-dependencies`)→ `dev`/`prd`):
 
 ```bash
 docker compose up -d                                            # devターゲット。compose.override.yaml を使用
@@ -30,6 +30,8 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd�
 ```
 
 composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
+
+**poetry自身は`dev`/`prd`イメージに含めない**: `dependencies`/`dev-dependencies`ステージで`pip install poetry`し`poetry install`するが、`POETRY_VIRTUALENVS_CREATE=true` + `POETRY_VIRTUALENVS_IN_PROJECT=true`により実際の依存関係は`poetry`自身とは別の`.venv`(プロジェクト内仮想環境)に入る。`dev`/`prd`ステージは`dependencies`から派生させず`base`から派生させ、`COPY --from=dependencies/dev-dependencies ... .venv .venv`で仮想環境の中身だけを引き継ぐ(`VIRTUAL_ENV`/`PATH`もこの`.venv`を指すよう、コピー先のdev/prdステージ側でのみ設定する — `.venv`が存在する前のステージでこれらを設定するとpoetryの仮想環境検出と衝突する可能性があるため)。以前は`POETRY_VIRTUALENVS_CREATE=false`でpoetryをアプリと同じPython環境に直接インストールしていたため、`prd`(本番)イメージにもpoetry自身とその依存(setuptools、dulwichなど)が同梱され、実際にDocker Scoutでそれらのfixed-version脆弱性(dulwichのWindows向けpath traversal RCE等)が検出された — ランタイムには不要なビルド専用ツールが本番の攻撃対象領域を不必要に広げていたのが原因。`dev-dependencies`は`dependencies`(prod依存のみの`.venv`)から派生し、devグループを追加インストールする形にしている(base依存の再インストールを避けるため)。
 
 **OpenShift上での書き込み権限**: `dev`/`prd`いずれの最終COPY直後にも `RUN chmod -R g+rwX .../app/data` を入れている。イメージは `COPY --chown=1001:0` でUID 1001・GID 0所有にしているが、OpenShiftの既定SCC(`restricted`)はコンテナを**ランダムなUID・GID 0**で起動するため、実行時のUIDはビルド時の1001と一致しない。ファイルのグループ書き込み権限(`g+rwX`)が無いと、`data/`配下へのファイル保存(レイアウト保存・タグマッピング編集など)が`PermissionError`で失敗する(読み取り専用の操作は権限不要なので気づきにくい)。docker-compose(通常のDocker)ではコンテナがイメージ通りのUID 1001で動くためこの問題は再現しない — OpenShift固有の制約。
 
@@ -45,9 +47,9 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 **CI(`.github/workflows/`)**:
 
-- `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` ディレクトリが無い場合のみスキップするガードが入っている)を実行する。ここでは本番用イメージのビルドやpushは行わない。
-- `build.yaml` — `main` への **`push`** イベントで実行する(`on: push: branches: [main]`)。`main` は直pushできない保護ブランチだが、PRをGitHubのマージボタンでマージするとGitHub自身が `main` へマージコミットをpushする形になるため、`push` イベントは通常どおり発火する(保護ブランチが防いでいるのは「人間/CIによる直接push」だけで、マージに伴う内部的なpushは防いでいない)。以前は `pull_request: types: [closed]` + `if: github.event.pull_request.merged == true` を使っていたが、`pull_request` イベントで発行されるトークンは `permissions` やリポジトリのWorkflow permissions設定を`Read and write`にしても `actions/cache` の書き込み(`cache write denied: token has no writable scopes`)ができないことが判明し、`push` トリガーに変更した。バージョン番号はマージコミットのメッセージ(GitHubが自動生成する `Merge pull request #N from <owner>/release/<version>` という文言、`github.event.head_commit.message`)から正規表現で抽出する(マージ戦略を「Create a merge commit」以外に変更した場合はこの抽出が壊れる点に注意)。`prd` ターゲットのイメージを `latest` とそのバージョンタグの両方でDocker Hubへpushしたあと、Docker Scout(`docker scout cves`)で脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない。以前はTrivyを使っていたが、検出対象がほぼ同じ機能の重複だったためDocker Scoutに一本化した — CLIでの`cves`コマンド自体はDocker Hubの無料プランで使え、追加のライセンス費用は不要)。スキャン結果は`docker scout cves ... --format markdown --output scout-report.md`でMarkdown化し、`actions/github-script`で固定タイトル(`🐳 Docker Scout 脆弱性スキャン結果`、`docker-scout`ラベル)のIssueを検索し、無ければ新規作成・あれば本文を最新結果で上書きする — 都度Issueを増やさず1件を使い回すことで、Claude Codeが`search_issues`/`issue_read`でいつでも最新の脆弱性状況を確認できるようにしている(過去の結果はそのIssueの編集履歴から追える)。
-- Docker Hubへのpushには `secrets.DOCKER_TOKEN` を使用し、ユーザー名はGitHubのユーザー名(`github.actor`)と共通の前提(Docker HubとGitHubで同じユーザー名運用)。
+- `test.yaml` — `release/*` へのPRで実行。`dev` ターゲットのDockerイメージをビルドし、その中で `ruff check` / `ruff format --check` / `pytest`(`tests/` ディレクトリが無い場合のみスキップするガードが入っている)を実行する。続けて`prd`ターゲットもpushせずローカルビルドし(`load: true`)、Docker Scout(`docker scout cves`)で脆弱性スキャンする(現状はレポートのみで、CIを失敗させる設定にはしていない。以前はTrivyを使っていたが検出対象がほぼ同じ機能の重複だったため一本化した — CLIでの`cves`コマンド自体はDocker Hubの無料プランで使え追加のライセンス費用は不要)。**この脆弱性スキャンは意図的に`main`マージ前(release/*へのPR時点)に置いている** — 以前は`build.yaml`側(mainへのpush後、Docker Hubへのpush後)でスキャンしていたが、それでは脆弱性があっても一度は公開されてから気づく形になってしまうため、mainマージ前に気づけるこの位置に移した。結果は`--only-severity critical,high`に絞ったMarkdownを`actions/github-script`で**そのPR自体への固定マーカー(`<!-- docker-scout-report -->`)付きコメント**として投稿し、再実行時は新規コメントを増やさず既存コメントを上書きする(medium/lowを含む全件は`docker-scout-report-pr-<PR番号>`という名前のArtifactとして90日保持)。PRコメントという形にしたのは、スキャン対象がその都度違うdev branchのPRごとに変わる(グローバルな「現在のリリース」という単一の状態ではない)ため、Claude Codeも人間も対象のPRを見ればそのまま結果が分かるようにする方が、リポジトリ全体で1件のIssueを使い回すより自然だからである(以前はbuild.yaml側で固定タイトルIssueを使い回す設計だったが、この位置移動に合わせてPRコメント方式に変更した)。Issue/PRコメントいずれも本文には65536文字の上限があり、全severity込みだと実際に超えて投稿が失敗した経緯があるため、severityで絞った上でさらに文字数でも防御的に切り詰めている。
+- `build.yaml` — `main` への **`push`** イベントで実行する(`on: push: branches: [main]`)。`main` は直pushできない保護ブランチだが、PRをGitHubのマージボタンでマージするとGitHub自身が `main` へマージコミットをpushする形になるため、`push` イベントは通常どおり発火する(保護ブランチが防いでいるのは「人間/CIによる直接push」だけで、マージに伴う内部的なpushは防いでいない)。以前は `pull_request: types: [closed]` + `if: github.event.pull_request.merged == true` を使っていたが、`pull_request` イベントで発行されるトークンは `permissions` やリポジトリのWorkflow permissions設定を`Read and write`にしても `actions/cache` の書き込み(`cache write denied: token has no writable scopes`)ができないことが判明し、`push` トリガーに変更した。バージョン番号はマージコミットのメッセージ(GitHubが自動生成する `Merge pull request #N from <owner>/release/<version>` という文言、`github.event.head_commit.message`)から正規表現で抽出する(マージ戦略を「Create a merge commit」以外に変更した場合はこの抽出が壊れる点に注意)。`prd` ターゲットのイメージを `latest` とそのバージョンタグの両方でDocker Hubへpushする。脆弱性スキャンは上記の理由で`test.yaml`側に一本化しており、ここでは行わない。
+- Docker Hubへのpushには `secrets.DOCKER_TOKEN` を使用し、ユーザー名はGitHubのユーザー名(`github.actor`)と共通の前提(Docker HubとGitHubで同じユーザー名運用)。**`docker scout cves` はpush/pull先に関係なくローカルのみのイメージに対してもDocker Hubへのログインを要求する**(未ログインだと `Log in with your Docker ID...` で終了コード1)ため、`test.yaml`側(pushしない`prd`イメージのスキャン)にも`build.yaml`と同じ`docker/login-action`ログインステップが必要— 「pushしないから認証不要」ではない点に注意。
 
 ## アーキテクチャ
 
