@@ -16,6 +16,10 @@
   let nextSeq = state.items.length + 1;
   let selectedId = null;
 
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 2;
+  let zoom = 1;
+
   const metaId = document.getElementById("meta-id");
   const metaName = document.getElementById("meta-name");
   const metaWidth = document.getElementById("meta-width");
@@ -25,6 +29,15 @@
   const downloadBtn = document.getElementById("download-btn");
   const statusEl = document.getElementById("editor-status");
   const saveMessage = document.getElementById("save-message");
+
+  const canvasWrap = document.getElementById("editor-canvas-wrap");
+  const canvasSpacer = document.getElementById("editor-canvas-spacer");
+  const zoomOutBtn = document.getElementById("zoom-out-btn");
+  const zoomInBtn = document.getElementById("zoom-in-btn");
+  const zoomResetBtn = document.getElementById("zoom-reset-btn");
+  const minimap = document.getElementById("editor-minimap");
+  const minimapItemsLayer = document.getElementById("editor-minimap-items");
+  const minimapViewport = document.getElementById("editor-minimap-viewport");
 
   const panelEmpty = document.getElementById("editor-panel-empty");
   const panelForm = document.getElementById("editor-panel-form");
@@ -43,7 +56,75 @@
   function renderCanvasSize() {
     canvas.style.width = `${state.width}px`;
     canvas.style.height = `${state.height}px`;
+    canvas.style.transformOrigin = "top left";
+    canvas.style.transform = `scale(${zoom})`;
+    // transformは見た目のサイズしか変えないため、canvasWrapのスクロール範囲を
+    // 決めるのはこのspacerの明示的なwidth/height(実サイズ×zoom)。
+    canvasSpacer.style.width = `${state.width * zoom}px`;
+    canvasSpacer.style.height = `${state.height * zoom}px`;
+    zoomResetBtn.textContent = `${Math.round(zoom * 100)}%`;
+    renderMinimap();
   }
+
+  function setZoom(nextZoom) {
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(nextZoom * 20) / 20));
+    renderCanvasSize();
+  }
+
+  function renderMinimapItems() {
+    const scale = minimap.clientWidth / state.width;
+    minimapItemsLayer.innerHTML = "";
+    state.items.forEach((item) => {
+      const dot = document.createElement("div");
+      dot.className = "editor-minimap__item";
+      dot.style.left = `${item.x * scale}px`;
+      dot.style.top = `${item.y * scale}px`;
+      dot.style.width = `${Math.max(2, item.w * scale)}px`;
+      dot.style.height = `${Math.max(2, item.h * scale)}px`;
+      minimapItemsLayer.appendChild(dot);
+    });
+  }
+
+  // ミニマップは、キャンバスがビューポートより大きくスクロールバーが出ている
+  // 場合限定で表示する(常に出すとキャンバスが十分小さい/十分ズームアウトされて
+  // いる場合にただの縮小コピーが常駐するだけになり邪魔なため)。
+  function renderMinimap() {
+    const needsScroll = canvasWrap.scrollWidth > canvasWrap.clientWidth || canvasWrap.scrollHeight > canvasWrap.clientHeight;
+    minimap.hidden = !needsScroll;
+    if (!needsScroll) return;
+
+    const scale = minimap.clientWidth / state.width;
+    minimap.style.height = `${state.height * scale}px`;
+    renderMinimapItems();
+
+    const viewLeft = canvasWrap.scrollLeft / zoom;
+    const viewTop = canvasWrap.scrollTop / zoom;
+    const viewWidth = Math.min(state.width, canvasWrap.clientWidth / zoom);
+    const viewHeight = Math.min(state.height, canvasWrap.clientHeight / zoom);
+
+    minimapViewport.style.left = `${viewLeft * scale}px`;
+    minimapViewport.style.top = `${viewTop * scale}px`;
+    minimapViewport.style.width = `${viewWidth * scale}px`;
+    minimapViewport.style.height = `${viewHeight * scale}px`;
+  }
+
+  minimap.addEventListener("pointerdown", (e) => {
+    const rect = minimap.getBoundingClientRect();
+    const scale = minimap.clientWidth / state.width;
+    const targetX = (e.clientX - rect.left) / scale;
+    const targetY = (e.clientY - rect.top) / scale;
+    canvasWrap.scrollTo({
+      left: Math.max(0, targetX * zoom - canvasWrap.clientWidth / 2),
+      top: Math.max(0, targetY * zoom - canvasWrap.clientHeight / 2),
+      behavior: "smooth",
+    });
+  });
+
+  canvasWrap.addEventListener("scroll", renderMinimap);
+  window.addEventListener("resize", renderMinimap);
+  zoomOutBtn.addEventListener("click", () => setZoom(zoom - 0.1));
+  zoomInBtn.addEventListener("click", () => setZoom(zoom + 0.1));
+  zoomResetBtn.addEventListener("click", () => setZoom(1));
 
   function renderStatus() {
     statusEl.textContent = t("layout_editor.item_count", { count: state.items.length });
@@ -74,6 +155,7 @@
 
       canvas.appendChild(box);
     });
+    renderMinimap();
   }
 
   // ドラッグ/リサイズ中に握っているbox要素をrenderItems()のinnerHTML再構築で
@@ -115,9 +197,11 @@
     const originX = item.x;
     const originY = item.y;
 
+    // ドラッグ中のマウス移動量(画面px)はズーム倍率で割ってキャンバス座標系に
+    // 変換する(scale()は見た目だけを縮小・拡大するため)。
     function onMove(ev) {
-      item.x = Math.max(0, Math.round(originX + (ev.clientX - startX)));
-      item.y = Math.max(0, Math.round(originY + (ev.clientY - startY)));
+      item.x = Math.max(0, Math.round(originX + (ev.clientX - startX) / zoom));
+      item.y = Math.max(0, Math.round(originY + (ev.clientY - startY) / zoom));
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
       if (selectedId === item.id) {
@@ -145,8 +229,8 @@
     const originH = item.h;
 
     function onMove(ev) {
-      item.w = Math.max(20, Math.round(originW + (ev.clientX - startX)));
-      item.h = Math.max(20, Math.round(originH + (ev.clientY - startY)));
+      item.w = Math.max(20, Math.round(originW + (ev.clientX - startX) / zoom));
+      item.h = Math.max(20, Math.round(originH + (ev.clientY - startY) / zoom));
       box.style.width = `${item.w}px`;
       box.style.height = `${item.h}px`;
       if (selectedId === item.id) {
