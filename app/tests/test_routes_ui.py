@@ -79,6 +79,21 @@ def test_layout_editor_new_renders_blank_form(client: TestClient, isolated_provi
     assert 'id="meta-id" value=""' in response.text
 
 
+def test_layout_editor_new_uses_widescreen_default_size(client: TestClient, isolated_provider: IsolatedPaths) -> None:
+    response = client.get("/ui/layouts/new")
+
+    assert '"width": 1920' in response.text
+    assert '"height": 1080' in response.text
+
+
+def test_layout_editor_has_no_width_height_inputs(client: TestClient, sample_layout: dict) -> None:
+    """キャンバスサイズは固定値運用のため、編集画面のUIからは変更できない(内部的には可変のまま)。"""
+    response = client.get("/ui/layouts/line-a/edit")
+
+    assert 'id="meta-width"' not in response.text
+    assert 'id="meta-height"' not in response.text
+
+
 def test_tag_mapping_create_then_appears_in_table(client: TestClient, isolated_provider: IsolatedPaths) -> None:
     response = client.post(
         "/ui/tag-mappings",

@@ -121,7 +121,7 @@ async def layout_delete(request: Request, layout_id: str) -> HTMLResponse:
 async def layout_editor_new(request: Request) -> HTMLResponse:
     blank = LayoutDefinition(
         schemaVersion="1.0",
-        layout=LayoutMeta.model_construct(id="", name="", width=900, height=420),
+        layout=LayoutMeta.model_construct(id="", name="", width=1920, height=1080),
         items=[],
     )
     return templates.TemplateResponse(

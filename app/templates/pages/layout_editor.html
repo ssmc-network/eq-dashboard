@@ -19,14 +19,6 @@
     <span>{{ t("layout_editor.field_name") }}</span>
     <input type="text" id="meta-name" value="{{ layout.layout.name }}" placeholder="{{ t('layout_editor.field_name_placeholder') }}">
   </label>
-  <label class="toolbar-field">
-    <span>{{ t("layout_editor.field_width") }}</span>
-    <input type="number" id="meta-width" min="100" step="10" value="{{ layout.layout.width }}">
-  </label>
-  <label class="toolbar-field">
-    <span>{{ t("layout_editor.field_height") }}</span>
-    <input type="number" id="meta-height" min="100" step="10" value="{{ layout.layout.height }}">
-  </label>
   <button type="button" id="add-item-btn" class="btn">{{ t("layout_editor.add_item") }}</button>
   <button type="button" id="save-btn" class="btn btn--accent">{{ t("layout_editor.save_to_server") }}</button>
   <button type="button" id="download-btn" class="btn">{{ t("layout_editor.download_json") }}</button>

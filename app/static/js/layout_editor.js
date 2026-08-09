@@ -8,8 +8,8 @@
   const state = {
     id: initial.layout.id || "",
     name: initial.layout.name || "",
-    width: initial.layout.width || 900,
-    height: initial.layout.height || 420,
+    width: initial.layout.width || 1920,
+    height: initial.layout.height || 1080,
     items: (initial.items || []).map((it) => ({ ...it })),
   };
   let originalId = initial.layout.id || "";
@@ -206,14 +206,21 @@
   metaName.addEventListener("input", () => {
     state.name = metaName.value;
   });
-  metaWidth.addEventListener("input", () => {
-    state.width = Number(metaWidth.value) || 100;
-    renderCanvasSize();
-  });
-  metaHeight.addEventListener("input", () => {
-    state.height = Number(metaHeight.value) || 100;
-    renderCanvasSize();
-  });
+  // 幅・高さはキャンバスサイズ固定方針のためUIから外しているが、内部の
+  // state.width/heightとこの配線自体は残す(#meta-width/#meta-heightを
+  // テンプレートに復活させればUIからの変更をそのまま復元できる)。
+  if (metaWidth) {
+    metaWidth.addEventListener("input", () => {
+      state.width = Number(metaWidth.value) || 100;
+      renderCanvasSize();
+    });
+  }
+  if (metaHeight) {
+    metaHeight.addEventListener("input", () => {
+      state.height = Number(metaHeight.value) || 100;
+      renderCanvasSize();
+    });
+  }
 
   function buildPayload() {
     return {
