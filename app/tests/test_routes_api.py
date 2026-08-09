@@ -1,6 +1,7 @@
 import io
 import json
 import zipfile
+from pathlib import Path
 
 import httpx
 from fastapi.testclient import TestClient
@@ -109,3 +110,51 @@ def test_export_all_layouts_empty_when_no_canvases(client: TestClient, isolated_
     assert response.status_code == 200
     with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
         assert zf.namelist() == []
+
+
+def test_save_rejects_path_traversal_id_and_writes_nothing_outside_layouts_dir(
+    client: TestClient, isolated_provider: IsolatedPaths, tmp_path: Path
+) -> None:
+    """layout.idはlayouts_dir配下のディレクトリ名として直接使われるため、絶対パス/
+    `../`を混ぜて外部へ書き込ませるパストラバーサルが可能だった(実際に検証済み)。"""
+    outside = tmp_path / "outside-write-target"
+
+    response = _post_save(client, _layout_payload(layout_id=str(outside / "evil")), original_id="")
+
+    assert response.status_code == 422
+    assert not outside.exists()
+
+
+def test_export_layout_rejects_path_traversal_id(
+    client: TestClient, isolated_provider: IsolatedPaths, tmp_path: Path
+) -> None:
+    """layout_idはクエリパラメータでスキーマ検証を通らないため、provider側の
+    防御(_layout_dir)で`../`によるlayouts_dir外のファイル読み取りを防ぐ必要がある。"""
+    leaked_dir = tmp_path / "outside-read-target"
+    leaked_dir.mkdir()
+    (leaked_dir / "layout.json").write_text(
+        json.dumps(_layout_payload(layout_id="leaked", name="Leaked")), encoding="utf-8"
+    )
+    traversal_id = "/".join([".."] * 10) + str(leaked_dir)
+
+    response = client.get("/api/standalone/layout/export", params={"layout_id": traversal_id})
+
+    assert response.status_code == 404
+
+
+def test_save_rename_with_path_traversal_original_id_does_not_delete_outside_target(
+    client: TestClient, isolated_provider: IsolatedPaths, tmp_path: Path
+) -> None:
+    """original_idもクエリパラメータでスキーマ検証を通らないため、renameが呼ぶ
+    delete_layoutに`../`を渡すと任意ディレクトリをrmtreeされてしまっていた
+    (実際に検証済みの脆弱性)。狙われたディレクトリが残ることを確認する。"""
+    must_survive = tmp_path / "must-survive"
+    must_survive.mkdir()
+    (must_survive / "file.txt").write_text("keep me", encoding="utf-8")
+    traversal_original_id = "/".join([".."] * 10) + str(must_survive)
+
+    response = _post_save(client, _layout_payload(layout_id="harmless-new-id"), original_id=traversal_original_id)
+
+    assert response.status_code == 200
+    assert must_survive.exists()
+    assert (must_survive / "file.txt").read_text(encoding="utf-8") == "keep me"

@@ -96,6 +96,26 @@ def test_layout_meta_rejects_blank_id_and_name() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "unsafe_id",
+    [
+        "../evil",
+        "../../etc/passwd",
+        "/tmp/evil",
+        "a/b",
+        "..",
+        "a\\b",
+    ],
+)
+def test_layout_meta_rejects_id_unsafe_for_filesystem_paths(unsafe_id: str) -> None:
+    """idはJsonStatusProviderでディレクトリ名として直接使われるため、パストラバーサルに
+    使える文字(パス区切り・`..`)を拒否する。"""
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate(
+            {"schemaVersion": "1.0", "layout": {"id": unsafe_id, "name": "x", "width": 10, "height": 10}, "items": []}
+        )
+
+
 @pytest.mark.parametrize(("field", "value"), [("width", 0), ("width", -1), ("height", 0), ("height", -1)])
 def test_layout_meta_rejects_non_positive_dimensions(field: str, value: int) -> None:
     layout_meta = {"id": "x", "name": "x", "width": 10, "height": 10, field: value}
