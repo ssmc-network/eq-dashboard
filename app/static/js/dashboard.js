@@ -50,7 +50,8 @@
 
   const fullscreenBtn = document.getElementById("fullscreen-btn");
   const fullscreenWrap = document.getElementById("dashboard-canvas-wrap");
-  if (fullscreenBtn && fullscreenWrap) {
+  const fullscreenExitBtn = document.getElementById("fullscreen-exit-btn");
+  if (fullscreenBtn && fullscreenWrap && fullscreenExitBtn) {
     function isFullscreen() {
       return document.fullscreenElement === fullscreenWrap;
     }
@@ -83,6 +84,9 @@
         enterFullscreen();
       }
     });
+    // ツールバーのボタンはfullscreenWrapの外にあり、全画面中は視覚的に隠れて
+    // クリックできなくなるため、fullscreenWrap内部にも終了ボタンを置く。
+    fullscreenExitBtn.addEventListener("click", exitFullscreen);
 
     document.addEventListener("fullscreenchange", () => {
       fullscreenBtn.textContent = isFullscreen() ? t("dashboard.fullscreen_exit") : t("dashboard.fullscreen_enter");
