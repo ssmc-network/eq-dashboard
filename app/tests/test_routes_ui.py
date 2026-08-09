@@ -94,6 +94,16 @@ def test_layout_editor_has_no_width_height_inputs(client: TestClient, sample_lay
     assert 'id="meta-height"' not in response.text
 
 
+def test_layout_editor_has_zoom_controls_and_minimap(client: TestClient, sample_layout: dict) -> None:
+    """キャンバスサイズが固定値のため、拡大縮小とミニマップで編集しやすくする。"""
+    response = client.get("/ui/layouts/line-a/edit")
+
+    assert 'id="zoom-out-btn"' in response.text
+    assert 'id="zoom-in-btn"' in response.text
+    assert 'id="zoom-reset-btn"' in response.text
+    assert 'id="editor-minimap"' in response.text
+
+
 def test_tag_mapping_create_then_appears_in_table(client: TestClient, isolated_provider: IsolatedPaths) -> None:
     response = client.post(
         "/ui/tag-mappings",
