@@ -3,16 +3,16 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
-fastapi = {extras = ["standard"], version = "^0.115.12"}
+fastapi = {extras = ["standard"], version = "^0.141.1"}
 pydantic-settings = "^2.0.3"
 httpx = "^0.28.1"
 tzdata = ">=2024.1"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.14.1"
-pytest = "^8.3.4"
-pytest-cov = "^6.0.0"
-ruff = "^0.11.2"
+mypy = "^2.3.0"
+pytest = "^9.1.1"
+pytest-cov = "^7.1.0"
+ruff = "^0.16.2"
 
 [build-system]
 requires = ["poetry-core"]
@@ -40,7 +40,7 @@ line-length = 119
 select = ["B", "E", "F", "I", "N", "W", "C90", "PL", "RUF", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004"]
+"tests/*" = ["PLR2004", "PLC0415"]
 
 [tool.ruff.format]
 quote-style = "double"

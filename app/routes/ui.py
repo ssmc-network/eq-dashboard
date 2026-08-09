@@ -369,7 +369,7 @@ async def standalone(request: Request) -> HTMLResponse:
 async def standalone_import_layout(request: Request, file: UploadFile = File(...)) -> HTMLResponse:
     raw = await file.read()
     result = validate_layout_json(raw, get_language(request))
-    exists = bool(result.ok and result.summary and layout_exists(result.summary["id"]))
+    exists = bool(result.ok and result.summary and layout_exists(str(result.summary["id"])))
     return templates.TemplateResponse(
         request,
         "partials/import_result.html",
@@ -574,8 +574,10 @@ def _get_operation_mode(request: Request) -> str:
 
 def _get_default_refresh_interval(request: Request) -> int:
     raw = request.cookies.get("default_refresh_interval")
+    if raw is None:
+        return DEFAULT_REFRESH_INTERVAL_SEC
     try:
         value = int(raw)
-    except (TypeError, ValueError):
+    except ValueError:
         return DEFAULT_REFRESH_INTERVAL_SEC
     return value if value >= 1 else DEFAULT_REFRESH_INTERVAL_SEC
