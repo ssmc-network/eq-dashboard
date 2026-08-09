@@ -1,4 +1,11 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+import re
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+# idはファイルシステムのディレクトリ名として直接使われる(JsonStatusProvider)。
+# `/`や`..`、絶対パスを許すとパストラバーサル(意図しないパス配下への
+# 書き込み・削除・読み取り)になるため、安全な文字種のみに制限する。
+_SAFE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class LayoutItem(BaseModel):
@@ -20,6 +27,13 @@ class LayoutMeta(BaseModel):
     name: str = Field(min_length=1)
     width: int = Field(gt=0)
     height: int = Field(gt=0)
+
+    @field_validator("id")
+    @classmethod
+    def _id_must_be_filesystem_safe(cls, value: str) -> str:
+        if not _SAFE_ID_PATTERN.match(value):
+            raise ValueError("idには英数字・ハイフン・アンダースコアのみ使用できます。")
+        return value
 
 
 class LayoutDefinition(BaseModel):
