@@ -14,8 +14,8 @@ WORKDIR /opt/app-root/src/project/app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     POETRY_INSTALLER_MAX_WORKERS=10 \
-    POETRY_VIRTUALENVS_CREATE=false \
-    VIRTUAL_ENV=/opt/app-root
+    POETRY_VIRTUALENVS_CREATE=true \
+    POETRY_VIRTUALENVS_IN_PROJECT=true
 
 USER 0
 
@@ -23,6 +23,13 @@ USER 0
 # ==========================================
 # 依存関係のビルド(poetry, pipパッケージ)
 # ==========================================
+# poetry自体はここ(dependencies/dev-dependencies)のシステムPython側に入るだけ。
+# dev/prdへ引き継ぐのは`poetry install`が作る.venv(プロジェクト内仮想環境)のみ
+# (下のdev/prdステージのCOPY --fromを参照)。poetry自身やそのビルド時限りの
+# 依存(setuptools、dulwichなど)が本番イメージに紛れ込むのを防ぐための構成。
+# VIRTUAL_ENV/PATHはこのステージではまだ設定しない — .venvが存在する前に
+# VIRTUAL_ENVを見せるとpoetryの仮想環境検出と衝突する可能性があるため、
+# 実際に.venvをCOPYし終えたdev/prdステージ側でのみ設定する。
 FROM base AS dependencies
 ARG HTTP_PROXY, HTTPS_PROXY
 ARG POETRY_VERSION
@@ -38,10 +45,22 @@ RUN poetry install --without dev --no-root && \
 
 
 # ==========================================
+# 依存関係のビルド(devグループを含む完全版)
+# ==========================================
+FROM dependencies AS dev-dependencies
+ARG HTTP_PROXY, HTTPS_PROXY
+
+RUN poetry install --no-root && \
+    poetry cache clear pypi --all
+
+
+# ==========================================
 # 開発用イメージ (dev)
 # ==========================================
-FROM dependencies AS dev
+FROM base AS dev
 ARG HTTP_PROXY, HTTPS_PROXY
+ENV VIRTUAL_ENV=/opt/app-root/src/project/app/.venv \
+    PATH=/opt/app-root/src/project/app/.venv/bin:$PATH
 
 USER 0
 RUN --mount=type=cache,target=/var/cache/dnf \
@@ -49,11 +68,7 @@ RUN --mount=type=cache,target=/var/cache/dnf \
     git tar
 
 USER 1001
-# キャッシュを効かせるためにpyproject.tomlだけ先にコピー
-COPY --chown=1001:0 ./app/pyproject.toml ./app/poetry.lock /opt/app-root/src/project/app/
-RUN poetry install --no-root && \
-    poetry cache clear pypi --all
-
+COPY --from=dev-dependencies --chown=1001:0 /opt/app-root/src/project/app/.venv /opt/app-root/src/project/app/.venv
 COPY --chown=1001:0 . /opt/app-root/src/project
 RUN chmod -R g+rwX /opt/app-root/src/project/app/data
 
@@ -61,8 +76,12 @@ RUN chmod -R g+rwX /opt/app-root/src/project/app/data
 # ==========================================
 # 本番用イメージ (prd)
 # ==========================================
-FROM dependencies AS prd
+FROM base AS prd
+ENV VIRTUAL_ENV=/opt/app-root/src/project/app/.venv \
+    PATH=/opt/app-root/src/project/app/.venv/bin:$PATH
 
+USER 1001
+COPY --from=dependencies --chown=1001:0 /opt/app-root/src/project/app/.venv /opt/app-root/src/project/app/.venv
 COPY --chown=1001:0 ./app /opt/app-root/src/project/app
 RUN chmod -R g+rwX /opt/app-root/src/project/app/data
 

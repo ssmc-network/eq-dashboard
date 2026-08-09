@@ -22,7 +22,7 @@ poetry run mypy .              # 型チェック
 poetry run pytest              # テスト
 ```
 
-Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` → `dev`/`prd`):
+Docker(UBI9ベースのマルチステージビルド: `base` → `dependencies` →(`dev-dependencies`)→ `dev`/`prd`):
 
 ```bash
 docker compose up -d                                            # devターゲット。compose.override.yaml を使用
@@ -30,6 +30,8 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build   # prd�
 ```
 
 composeファイルは意図的にCompose Specificationの命名(`compose.yaml` / `compose.override.yaml` / `compose.production.yaml`)に従っています — `docker-` プレフィックスなし、拡張子も統一(`.yaml`のみ)。overrideファイルを追加する場合もこの命名規則を維持してください。
+
+**poetry自身は`dev`/`prd`イメージに含めない**: `dependencies`/`dev-dependencies`ステージで`pip install poetry`し`poetry install`するが、`POETRY_VIRTUALENVS_CREATE=true` + `POETRY_VIRTUALENVS_IN_PROJECT=true`により実際の依存関係は`poetry`自身とは別の`.venv`(プロジェクト内仮想環境)に入る。`dev`/`prd`ステージは`dependencies`から派生させず`base`から派生させ、`COPY --from=dependencies/dev-dependencies ... .venv .venv`で仮想環境の中身だけを引き継ぐ(`VIRTUAL_ENV`/`PATH`もこの`.venv`を指すよう、コピー先のdev/prdステージ側でのみ設定する — `.venv`が存在する前のステージでこれらを設定するとpoetryの仮想環境検出と衝突する可能性があるため)。以前は`POETRY_VIRTUALENVS_CREATE=false`でpoetryをアプリと同じPython環境に直接インストールしていたため、`prd`(本番)イメージにもpoetry自身とその依存(setuptools、dulwichなど)が同梱され、実際にDocker Scoutでそれらのfixed-version脆弱性(dulwichのWindows向けpath traversal RCE等)が検出された — ランタイムには不要なビルド専用ツールが本番の攻撃対象領域を不必要に広げていたのが原因。`dev-dependencies`は`dependencies`(prod依存のみの`.venv`)から派生し、devグループを追加インストールする形にしている(base依存の再インストールを避けるため)。
 
 **OpenShift上での書き込み権限**: `dev`/`prd`いずれの最終COPY直後にも `RUN chmod -R g+rwX .../app/data` を入れている。イメージは `COPY --chown=1001:0` でUID 1001・GID 0所有にしているが、OpenShiftの既定SCC(`restricted`)はコンテナを**ランダムなUID・GID 0**で起動するため、実行時のUIDはビルド時の1001と一致しない。ファイルのグループ書き込み権限(`g+rwX`)が無いと、`data/`配下へのファイル保存(レイアウト保存・タグマッピング編集など)が`PermissionError`で失敗する(読み取り専用の操作は権限不要なので気づきにくい)。docker-compose(通常のDocker)ではコンテナがイメージ通りのUID 1001で動くためこの問題は再現しない — OpenShift固有の制約。
 
