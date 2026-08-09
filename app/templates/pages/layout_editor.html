@@ -22,13 +22,26 @@
   <button type="button" id="add-item-btn" class="btn">{{ t("layout_editor.add_item") }}</button>
   <button type="button" id="save-btn" class="btn btn--accent">{{ t("layout_editor.save_to_server") }}</button>
   <button type="button" id="download-btn" class="btn">{{ t("layout_editor.download_json") }}</button>
+  <div class="toolbar-field zoom-field">
+    <button type="button" id="zoom-out-btn" class="btn" aria-label="{{ t('layout_editor.zoom_out') }}">－</button>
+    <button type="button" id="zoom-reset-btn" class="btn zoom-field__level" title="{{ t('layout_editor.zoom_reset') }}">100%</button>
+    <button type="button" id="zoom-in-btn" class="btn" aria-label="{{ t('layout_editor.zoom_in') }}">＋</button>
+  </div>
   <span class="badge" id="editor-status">{{ t("layout_editor.item_count", count=layout.items|length) }}</span>
   <span class="editor-save-message" id="save-message"></span>
 </div>
 
 <div class="editor-layout">
-  <div class="dashboard-canvas-wrap">
-    <div id="editor-canvas" class="dashboard-canvas"></div>
+  <div class="editor-canvas-area" id="editor-canvas-area">
+    <div class="dashboard-canvas-wrap" id="editor-canvas-wrap">
+      <div class="editor-canvas-spacer" id="editor-canvas-spacer">
+        <div id="editor-canvas" class="dashboard-canvas"></div>
+      </div>
+    </div>
+    <div class="editor-minimap" id="editor-minimap" hidden>
+      <div class="editor-minimap__items" id="editor-minimap-items"></div>
+      <div class="editor-minimap__viewport" id="editor-minimap-viewport"></div>
+    </div>
   </div>
   <aside class="editor-panel">
     <p class="editor-panel__empty" id="editor-panel-empty">{{ t("layout_editor.panel_empty") }}</p>

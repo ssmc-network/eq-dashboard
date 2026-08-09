@@ -653,9 +653,72 @@ button {
   gap: 1rem;
 }
 
-.editor-layout .dashboard-canvas-wrap {
+.editor-canvas-area {
+  position: relative;
   flex: 1;
   min-width: 0;
+}
+
+.editor-layout .dashboard-canvas-wrap {
+  /* キャンバスサイズが固定(例: 1920×1080)のため、編集エリア自身の高さも
+     固定してスクロール領域として切り出す。そうしないと縦方向は`.main`側の
+     ページスクロールに委ねられてしまい、ミニマップのビューポート矩形が
+     縦横で一貫した座標系(wrap.scrollLeft/Top)を持てなくなる。 */
+  height: 70vh;
+}
+
+/* ズームは.editor-canvasにtransform: scale()で適用する。transformは見た目の
+   サイズしか変えないため、スクロール領域の計算に使われるレイアウトサイズは
+   このspacer要素側で明示的に`width/height = 実サイズ × zoom`として持たせる
+   (ダッシュボード全画面表示のスクロールバー問題と同根の対策)。 */
+.editor-canvas-spacer {
+  position: relative;
+}
+
+.zoom-field {
+  gap: 0.25rem;
+}
+
+.zoom-field__level {
+  min-width: 4rem;
+  justify-content: center;
+  font-family: var(--font-mono);
+  cursor: default;
+}
+
+/* position: fixedでビューポート基準に固定する(.editor-canvas-area基準の
+   絶対配置だと、キャンバスエリアがビューポートより縦長でページ自体がスクロール
+   する状況で、ミニマップがスクロール先の見えない位置に置かれてしまうため)。 */
+.editor-minimap {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  z-index: 1;
+  width: 180px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  cursor: crosshair;
+  overflow: hidden;
+}
+
+.editor-minimap__items {
+  position: absolute;
+  inset: 0;
+}
+
+.editor-minimap__item {
+  position: absolute;
+  background: var(--text-faint);
+  border-radius: 1px;
+}
+
+.editor-minimap__viewport {
+  position: absolute;
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  pointer-events: none;
 }
 
 .editor-panel {
