@@ -557,19 +557,19 @@ button {
 /* ダッシュボードは読み取り専用表示なので、画面の空きスペースを最大限使い
    (トップバー・ツールバー・.mainのpaddingを除いた残りの高さ)、JS側
    (dashboard.js)が.dashboard-canvasを常にこの領域へscale-to-fitさせる。
-   `max-height`はJS側がscale計算のために使う上限であり、実際のwrapの
-   width/heightはJS側(applyCanvasScale)がscale後の実寸に合わせてinline
-   styleで縮める — キャンバスの縦横比(例: 16:9)がこの上限領域の縦横比と
-   一致しない場合、`min-height`で常に上限いっぱいの箱を確保すると、中に
-   center配置された(実際には縦横比の都合で余る)キャンバスの上下(または
-   左右)に空白の箱がそのまま居座って見えてしまうため。中央寄せ自体は
-   縮めた後の余り(パディングなど)向けに残しておく。編集画面
+   `max-height`はJS側がscale計算のために使う上限であり、wrapの高さは
+   JS側(applyCanvasScale)がscale後の実寸に合わせてinline styleで縮める
+   (幅は常に.mainいっぱいを維持) — キャンバスの縦横比(例: 16:9)が
+   この上限領域の縦横比と一致しない場合、`min-height`で常に上限いっぱいの
+   箱を確保すると、キャンバスの上下に空白の箱がそのまま居座って見えて
+   しまうため。キャンバスは中央寄せではなく左上寄せにする(意図的な方針:
+   フロアマップとして常に同じ位置から見えた方が把握しやすい)。編集画面
    (#editor-canvas-wrap)は手動ズーム/ドラッグの座標計算があるため、この
    自動スケールは適用しない。 */
 #dashboard-canvas-wrap {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   max-height: calc(100vh - var(--topbar-height) - 8rem);
 }
 
