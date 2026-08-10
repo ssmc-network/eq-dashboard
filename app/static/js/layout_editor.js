@@ -121,7 +121,10 @@
   });
 
   canvasWrap.addEventListener("scroll", renderMinimap);
-  window.addEventListener("resize", renderMinimap);
+  // window resizeだけでは、サイドバー折りたたみ(ウィンドウサイズは変わらず
+  // canvasWrapの幅だけ変わる)を捉えられないため、canvasWrap自体のサイズ
+  // 変化をResizeObserverで監視する。
+  new ResizeObserver(renderMinimap).observe(canvasWrap);
   zoomOutBtn.addEventListener("click", () => setZoom(zoom - 0.1));
   zoomInBtn.addEventListener("click", () => setZoom(zoom + 0.1));
   zoomResetBtn.addEventListener("click", () => setZoom(1));
