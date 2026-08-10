@@ -64,6 +64,13 @@ jobs:
             .venv/bin/pip show setuptools || true
             echo "--- why is msgpack installed? ---"
             .venv/bin/pip show msgpack || true
+            echo "--- searching whole filesystem for setuptools/msgpack dist-info ---"
+            find / -xdev -iname "setuptools*" -o -iname "msgpack*" 2>/dev/null
+            echo "--- system python site-packages (outside .venv) ---"
+            python3 -c "import sys; print(sys.path)" || true
+            for d in /usr/lib*/python3*/site-packages /usr/lib*/python3*/dist-packages; do
+              [ -d "$d" ] && echo "=== $d ===" && ls "$d"
+            done
           '
 
       - name: Login to Docker Hub
