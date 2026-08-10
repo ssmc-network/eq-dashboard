@@ -557,14 +557,20 @@ button {
 /* ダッシュボードは読み取り専用表示なので、画面の空きスペースを最大限使い
    (トップバー・ツールバー・.mainのpaddingを除いた残りの高さ)、JS側
    (dashboard.js)が.dashboard-canvasを常にこの領域へscale-to-fitさせる。
-   中央寄せしておくことで、キャンバスの縦横比がラップ領域と合わない場合に
-   左上に偏らず余白が均等になる。編集画面(#editor-canvas-wrap)は手動ズーム/
-   ドラッグの座標計算があるため、このセンタリング・自動スケールは適用しない。 */
+   `max-height`はJS側がscale計算のために使う上限であり、実際のwrapの
+   width/heightはJS側(applyCanvasScale)がscale後の実寸に合わせてinline
+   styleで縮める — キャンバスの縦横比(例: 16:9)がこの上限領域の縦横比と
+   一致しない場合、`min-height`で常に上限いっぱいの箱を確保すると、中に
+   center配置された(実際には縦横比の都合で余る)キャンバスの上下(または
+   左右)に空白の箱がそのまま居座って見えてしまうため。中央寄せ自体は
+   縮めた後の余り(パディングなど)向けに残しておく。編集画面
+   (#editor-canvas-wrap)は手動ズーム/ドラッグの座標計算があるため、この
+   自動スケールは適用しない。 */
 #dashboard-canvas-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - var(--topbar-height) - 8rem);
+  max-height: calc(100vh - var(--topbar-height) - 8rem);
 }
 
 /* キャンバスは簡易図面の用紙。ライトは白紙、ダークは--diagram-canvas-bgの
