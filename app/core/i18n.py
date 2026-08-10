@@ -15,6 +15,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "nav.settings": {"ja": "システム設定", "en": "Settings"},
     "nav.back_to_settings": {"ja": "← システム設定へ", "en": "← Back to Settings"},
     "nav.back_to_layouts": {"ja": "← キャンバス一覧へ", "en": "← Back to Canvas List"},
+    "nav.toggle_sidebar": {"ja": "サイドバーの折りたたみ切替", "en": "Toggle sidebar"},
     "common.save": {"ja": "保存", "en": "Save"},
     "common.cancel": {"ja": "キャンセル", "en": "Cancel"},
     "common.edit": {"ja": "編集", "en": "Edit"},
@@ -23,10 +24,6 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "common.none_value": {"ja": "—", "en": "—"},
     # ダッシュボード
     "dashboard.title": {"ja": "ダッシュボード", "en": "Dashboard"},
-    "dashboard.description": {
-        "ja": "簡易図面上の装置を稼働状態の色で表示します(サンプルJSONデータ)。",
-        "en": "Shows equipment on a simple floor map, colored by run state (sample JSON data).",
-    },
     "dashboard.canvas_label": {"ja": "キャンバス", "en": "Canvas"},
     "dashboard.auto_refresh_label": {"ja": "自動更新", "en": "Auto refresh"},
     "dashboard.auto_refresh_off": {"ja": "なし", "en": "Off"},
@@ -62,18 +59,6 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "layout_editor.title_new": {"ja": "新規キャンバス", "en": "New Canvas"},
     "layout_editor.title_suffix": {"ja": "編集", "en": "Edit"},
     "layout_editor.heading_edit_suffix": {"ja": "を編集", "en": "- Edit"},
-    "layout_editor.description": {
-        "ja": (
-            "装置図形をドラッグで配置・リサイズし、稼働状態のタグと紐づけます。編集内容はサーバーへ保存、"
-            "またはJSONとしてダウンロードできます。IDを変更すると、そのキャンバスをリネームします"
-            "(既存の別キャンバスと同じIDにする場合は上書き確認が表示されます)。"
-        ),
-        "en": (
-            "Drag equipment shapes to position and resize them, and link them to run-state tags. "
-            "You can save changes to the server or download them as JSON. Changing the ID renames the canvas "
-            "(if it matches another existing canvas, an overwrite confirmation is shown)."
-        ),
-    },
     "layout_editor.field_id": {"ja": "ID", "en": "ID"},
     "layout_editor.field_name": {"ja": "名前", "en": "Name"},
     "layout_editor.field_name_placeholder": {"ja": "1F 組立ライン", "en": "1F Assembly Line"},

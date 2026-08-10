@@ -21,7 +21,9 @@
   --status-alarm: #d9363e;
   --status-alarm-soft: rgba(217, 54, 62, 0.12);
 
-  /* 図面キャンバスは常に白紙なので、装置の状態色はテーマに関わらず固定 */
+  /* 装置の状態色(塗り)はテーマに関わらず固定。キャンバス背景と枠線色(ink)は
+     テーマに追従する(ライトは白紙、ダークは暗めの紙)。 */
+  --diagram-canvas-bg: #ffffff;
   --diagram-ink: #1a2128;
   --diagram-running: #2f9e44;
   --diagram-stopped: #8b96a3;
@@ -35,6 +37,7 @@
   --radius-md: 10px;
 
   --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
   --topbar-height: 56px;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN",
@@ -65,6 +68,9 @@
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+    --diagram-canvas-bg: #242830;
+    --diagram-ink: #d7dde3;
   }
 }
 
@@ -91,6 +97,9 @@
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  --diagram-canvas-bg: #242830;
+  --diagram-ink: #d7dde3;
 }
 
 :root[data-theme="light"] {
@@ -115,6 +124,9 @@
 
   --shadow-sm: 0 1px 2px rgba(20, 24, 29, 0.06);
   --shadow-md: 0 4px 16px rgba(20, 24, 29, 0.08);
+
+  --diagram-canvas-bg: #ffffff;
+  --diagram-ink: #1a2128;
 }
 
 /* ==========================================
@@ -180,15 +192,57 @@ button {
     "sidebar topbar"
     "sidebar main";
   min-height: 100vh;
+  transition: grid-template-columns 0.15s ease;
+}
+
+/* サイドバー折りたたみ(ハンバーガーメニュー): アイコンのみの細いレールに
+   縮める。状態はCookie(sidebar_collapsed)で永続化し、次回アクセス時も
+   サーバー側レンダリングの時点から反映される(static/js/sidebar.jsが
+   クリック時にCookieを書き換えつつ属性を即時トグルする)。 */
+.app-shell[data-sidebar-collapsed] {
+  grid-template-columns: var(--sidebar-width-collapsed) 1fr;
+}
+
+.app-shell[data-sidebar-collapsed] .sidebar__brand-text,
+.app-shell[data-sidebar-collapsed] .sidebar__link span:not(.sidebar__link-icon) {
+  display: none;
+}
+
+.app-shell[data-sidebar-collapsed] .sidebar__brand {
+  justify-content: center;
+  padding: 0.5rem 0 1.25rem;
+}
+
+.app-shell[data-sidebar-collapsed] .sidebar__link {
+  justify-content: center;
 }
 
 .topbar {
   grid-area: topbar;
   display: flex;
   align-items: center;
+  gap: 0.9rem;
   padding: 0 1.5rem;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
+}
+
+.sidebar-toggle-btn {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 1.1rem;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--panel-sunken);
+  color: var(--text);
 }
 
 .topbar__title {
@@ -204,6 +258,7 @@ button {
   background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 1rem 0.75rem;
+  overflow: hidden;
 }
 
 .sidebar__brand {
@@ -211,6 +266,7 @@ button {
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 0.6rem 1.25rem;
+  white-space: nowrap;
 }
 
 .sidebar__brand-mark {
@@ -252,6 +308,7 @@ button {
   font-size: 0.87rem;
   color: var(--text-dim);
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .sidebar__link-icon {
@@ -278,7 +335,7 @@ button {
 
 .main {
   grid-area: main;
-  padding: 2rem;
+  padding: 1.25rem 1.5rem;
   overflow-y: auto;
 }
 
@@ -288,7 +345,7 @@ button {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .page-header h1 {
@@ -451,8 +508,8 @@ button {
   align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 1rem;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -497,10 +554,24 @@ button {
   padding: 1rem;
 }
 
-/* キャンバスは簡易図面の用紙として、テーマに関わらず常に白背景 */
+/* ダッシュボードは読み取り専用表示なので、画面の空きスペースを最大限使い
+   (トップバー・ツールバー・.mainのpaddingを除いた残りの高さ)、JS側
+   (dashboard.js)が.dashboard-canvasを常にこの領域へscale-to-fitさせる。
+   中央寄せしておくことで、キャンバスの縦横比がラップ領域と合わない場合に
+   左上に偏らず余白が均等になる。編集画面(#editor-canvas-wrap)は手動ズーム/
+   ドラッグの座標計算があるため、このセンタリング・自動スケールは適用しない。 */
+#dashboard-canvas-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--topbar-height) - 8rem);
+}
+
+/* キャンバスは簡易図面の用紙。ライトは白紙、ダークは--diagram-canvas-bgの
+   暗めの紙に切り替わる(装置の状態色そのものはテーマに関わらず固定)。 */
 .dashboard-canvas {
   position: relative;
-  background: #ffffff;
+  background: var(--diagram-canvas-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
@@ -521,7 +592,7 @@ button {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: var(--diagram-canvas-bg);
   overflow: hidden;
 }
 
@@ -569,7 +640,9 @@ button {
 }
 
 .eq-box--unknown .eq-box__label {
-  color: var(--diagram-ink);
+  /* --diagram-unknownの塗り(薄いグレー)はテーマに関わらず固定なので、
+     ラベル文字色も(--diagram-inkに追従させず)常に濃色で固定する */
+  color: #1a2128;
   text-shadow: none;
 }
 
@@ -663,8 +736,10 @@ button {
   /* キャンバスサイズが固定(例: 1920×1080)のため、編集エリア自身の高さも
      固定してスクロール領域として切り出す。そうしないと縦方向は`.main`側の
      ページスクロールに委ねられてしまい、ミニマップのビューポート矩形が
-     縦横で一貫した座標系(wrap.scrollLeft/Top)を持てなくなる。 */
-  height: 70vh;
+     縦横で一貫した座標系(wrap.scrollLeft/Top)を持てなくなる。画面の空きを
+     最大限使うため、固定vh比率ではなくトップバー・ツールバー分を引いた
+     残り高さを使う。 */
+  height: calc(100vh - var(--topbar-height) - 8rem);
 }
 
 /* ズームは.editor-canvasにtransform: scale()で適用する。transformは見た目の
@@ -695,7 +770,7 @@ button {
   bottom: 2rem;
   z-index: 1;
   width: 180px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-md);

@@ -55,16 +55,26 @@
       return document.fullscreenElement === fullscreenWrap;
     }
 
-    // transformは#dashboard-items内の.dashboard-canvas(auto-refreshのたびに
-    // 作り直される)に適用するため、htmxのswap後も再計算が必要。
-    function applyFullscreenScale() {
+    // 通常表示でも、キャンバスをラップ領域に収まるようscale-to-fitする
+    // (画面の空きスペースを有効活用するため)。全画面表示中はウィンドウ
+    // 全体に、それ以外はラップのクライアント領域(パディング分を除く)に
+    // フィットさせる。transformは#dashboard-items内の.dashboard-canvas
+    // (auto-refreshのたびに作り直される)に適用するため、htmxのswap後も
+    // 再計算が必要。
+    function applyCanvasScale() {
       const canvasEl = target.querySelector(".dashboard-canvas");
       if (!canvasEl) return;
-      if (!isFullscreen()) {
-        canvasEl.style.transform = "";
-        return;
+      let availableWidth;
+      let availableHeight;
+      if (isFullscreen()) {
+        availableWidth = window.innerWidth;
+        availableHeight = window.innerHeight;
+      } else {
+        const style = window.getComputedStyle(fullscreenWrap);
+        availableWidth = fullscreenWrap.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        availableHeight = fullscreenWrap.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       }
-      const scale = Math.min(window.innerWidth / canvasEl.offsetWidth, window.innerHeight / canvasEl.offsetHeight);
+      const scale = Math.min(availableWidth / canvasEl.offsetWidth, availableHeight / canvasEl.offsetHeight);
       canvasEl.style.transform = `scale(${scale})`;
     }
 
@@ -86,13 +96,14 @@
 
     document.addEventListener("fullscreenchange", () => {
       fullscreenBtn.textContent = isFullscreen() ? t("dashboard.fullscreen_exit") : t("dashboard.fullscreen_enter");
-      applyFullscreenScale();
+      applyCanvasScale();
     });
 
-    window.addEventListener("resize", () => {
-      if (isFullscreen()) applyFullscreenScale();
-    });
-
-    target.addEventListener("htmx:afterSwap", applyFullscreenScale);
+    // window resizeだけでは、サイドバー折りたたみ(ウィンドウサイズは
+    // 変わらずラップの幅だけ変わる)を捉えられないため、ラップ自体の
+    // サイズ変化をResizeObserverで監視する。
+    new ResizeObserver(applyCanvasScale).observe(fullscreenWrap);
+    target.addEventListener("htmx:afterSwap", applyCanvasScale);
+    applyCanvasScale();
   }
 })();
