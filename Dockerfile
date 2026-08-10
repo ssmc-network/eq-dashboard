@@ -2,7 +2,7 @@
 # グローバル設定
 # ==========================================
 ARG PYTHON_VERSION=ubi10/python-314-minimal:1785806428
-ARG POETRY_VERSION=2.1.2
+ARG POETRY_VERSION=2.4.1
 
 
 # ==========================================
@@ -36,7 +36,8 @@ ARG POETRY_VERSION
 
 USER 1001
 RUN pip install --upgrade --no-cache-dir pip && \
-    pip install --no-cache-dir poetry=="${POETRY_VERSION}"
+    pip install --no-cache-dir poetry=="${POETRY_VERSION}" && \
+    poetry config virtualenvs.options.no-pip true
 
 COPY --chown=1001:0 ./app/pyproject.toml ./app/poetry.lock /opt/app-root/src/project/app/
 
