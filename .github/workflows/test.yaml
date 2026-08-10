@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - release/*
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -70,7 +71,7 @@ jobs:
       - name: Upload full Docker Scout report
         uses: actions/upload-artifact@v4
         with:
-          name: docker-scout-report-pr-${{ github.event.pull_request.number }}
+          name: docker-scout-report-pr-${{ github.event.pull_request.number || github.run_id }}
           path: scout-report-full.md
           retention-days: 90
 
@@ -89,9 +90,9 @@ jobs:
               '## 🐳 Docker Scout 脆弱性スキャン結果',
               '',
               `**スキャン日時:** ${new Date().toISOString()}`,
-              '**対象:** このPRのマージ後に作られる本番(`prd`)イメージ',
+              '**対象:** 本番(`prd`)イメージ',
               `**Workflow run:** ${runUrl}`,
-              '**表示範囲:** critical/high のみ(medium/lowを含む全件はWorkflow runのArtifact `docker-scout-report-pr-${{ github.event.pull_request.number }}` を参照)',
+              '**表示範囲:** critical/high のみ(medium/lowを含む全件はWorkflow runのArtifact `docker-scout-report-pr-${{ github.event.pull_request.number || github.run_id }}` を参照)',
               '',
             ].join('\n');
             const footer = '\n\n<sub>このPRに新しいコミットがpushされるたび、このコメントが最新結果で上書きされます。</sub>';
@@ -103,25 +104,31 @@ jobs:
             }
             const body = header + report + footer;
 
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const existing = comments.find((comment) => comment.body.startsWith(marker));
+            // workflow_dispatchでの手動実行(PRが無い)ではジョブのサマリーにのみ出力する。
+            // PR起点のイベントでのみ、そのPR自体へのコメント投稿/上書きも行う。
+            await core.summary.addRaw(body).write();
 
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
+            if (context.eventName === 'pull_request') {
+              const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body,
               });
+              const existing = comments.find((comment) => comment.body.startsWith(marker));
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body,
+                });
+              }
             }
