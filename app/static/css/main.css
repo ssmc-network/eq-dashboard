@@ -733,13 +733,22 @@ button {
 }
 
 .editor-layout .dashboard-canvas-wrap {
-  /* キャンバスサイズが固定(例: 1920×1080)のため、編集エリア自身の高さも
-     固定してスクロール領域として切り出す。そうしないと縦方向は`.main`側の
-     ページスクロールに委ねられてしまい、ミニマップのビューポート矩形が
-     縦横で一貫した座標系(wrap.scrollLeft/Top)を持てなくなる。画面の空きを
-     最大限使うため、固定vh比率ではなくトップバー・ツールバー分を引いた
-     残り高さを使う。 */
-  height: calc(100vh - var(--topbar-height) - 8rem);
+  /* 画面の空きを最大限使うため、固定vh比率ではなくトップバー・ツールバー分を
+     引いた残り高さを上限(max-height)として使う。`height`ではなく`max-height`
+     にしているのは、サンプルデータのように実キャンバスが小さい場合に、
+     wrapが常にビューポート全体の高さを確保して大きな空白を残してしまう
+     問題があったため — max-heightならwrapは内側のspacer(実サイズ×zoom)に
+     応じて縮み、この上限に達したときだけスクロール領域として切り出される。
+     ミニマップのビューポート矩形が使う座標系(wrap.scrollLeft/Top)は
+     wrapの実サイズに依存しないため、縮んでも計算は崩れない。
+     幅も同様に`width: fit-content`で内側のspacerの実サイズに合わせて
+     縮める(小さいキャンバスの右側に余白が残る問題への対策) — `flex: 1`の
+     .editor-canvas-areaはそのまま画面幅まで伸びられるが、wrap自身は
+     コンテンツ幅までしか広がらない。大きいキャンバスでは`max-width`で
+     .editor-canvas-areaの幅まで抑え、そこからは横スクロールに委ねる。 */
+  max-height: calc(100vh - var(--topbar-height) - 8rem);
+  width: fit-content;
+  max-width: 100%;
 }
 
 /* ズームは.editor-canvasにtransform: scale()で適用する。transformは見た目の
