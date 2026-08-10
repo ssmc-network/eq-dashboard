@@ -2,7 +2,7 @@
 # グローバル設定
 # ==========================================
 ARG PYTHON_VERSION=ubi10/python-314-minimal:1785806428
-ARG POETRY_VERSION=2.4.1
+ARG POETRY_VERSION=2.1.2
 
 
 # ==========================================
