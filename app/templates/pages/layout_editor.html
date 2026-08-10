@@ -3,10 +3,7 @@
 {% block page_title %}{{ t("nav.layout_editor") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <div>
-    <h1>{{ t("layout_editor.title_new") if is_new else layout.layout.name + " " + t("layout_editor.heading_edit_suffix") }}</h1>
-    <p>{{ t("layout_editor.description") }}</p>
-  </div>
+  <h1>{{ t("layout_editor.title_new") if is_new else layout.layout.name + " " + t("layout_editor.heading_edit_suffix") }}</h1>
   <a class="btn-link" href="/ui/layouts">{{ t("nav.back_to_layouts") }}</a>
 </div>
 
