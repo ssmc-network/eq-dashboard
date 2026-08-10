@@ -64,6 +64,14 @@
     function applyCanvasScale() {
       const canvasEl = target.querySelector(".dashboard-canvas");
       if (!canvasEl) return;
+
+      // 幅/高さのinline styleを一旦リセットしてCSSの上限(max-height、幅は
+      // 親いっぱい)基準で測り直す。前回shrink後の値を基準にすると、次に
+      // 使える余地が広がったとき(ウィンドウを大きくした等)に縮んだまま
+      // 戻らなくなるため。
+      fullscreenWrap.style.width = "";
+      fullscreenWrap.style.height = "";
+
       let availableWidth;
       let availableHeight;
       if (isFullscreen()) {
@@ -76,6 +84,19 @@
       }
       const scale = Math.min(availableWidth / canvasEl.offsetWidth, availableHeight / canvasEl.offsetHeight);
       canvasEl.style.transform = `scale(${scale})`;
+
+      // 全画面表示はビューポート全体が背景になるため、キャンバスの縦横比と
+      // 合わない分の余白(レターボックス)が出ても違和感は無い。通常表示は
+      // wrap自体が枠付きのパネルなので、この余白がそのまま「使われていない
+      // 箱」に見えてしまう — wrapの実寸をscale後のキャンバスに合わせて
+      // 縮め、余白を無くす。
+      if (!isFullscreen()) {
+        const style = window.getComputedStyle(fullscreenWrap);
+        const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+        const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        fullscreenWrap.style.width = `${canvasEl.offsetWidth * scale + paddingX}px`;
+        fullscreenWrap.style.height = `${canvasEl.offsetHeight * scale + paddingY}px`;
+      }
     }
 
     function enterFullscreen() {
@@ -100,9 +121,14 @@
     });
 
     // window resizeだけでは、サイドバー折りたたみ(ウィンドウサイズは
-    // 変わらずラップの幅だけ変わる)を捉えられないため、ラップ自体の
-    // サイズ変化をResizeObserverで監視する。
-    new ResizeObserver(applyCanvasScale).observe(fullscreenWrap);
+    // 変わらずラップの幅だけ変わる)を捉えられないため、周囲の
+    // サイズ変化をResizeObserverで監視する。監視対象はラップ自身ではなく
+    // その親(.main)にしている — applyCanvasScale自身がラップの
+    // width/heightをinline styleで書き換えるため、ラップ自身を監視すると
+    // 「利用可能な領域が広がった(親が大きくなった)」という変化を検知
+    // できず(ラップの実サイズはinline style値のまま変わらないため)、
+    // ウィンドウを再度大きくしても縮んだままになってしまう。
+    new ResizeObserver(applyCanvasScale).observe(fullscreenWrap.parentElement);
     target.addEventListener("htmx:afterSwap", applyCanvasScale);
     applyCanvasScale();
   }
