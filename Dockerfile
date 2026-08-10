@@ -37,8 +37,7 @@ ARG POETRY_VERSION
 USER 1001
 RUN pip install --upgrade --no-cache-dir pip && \
     pip install --no-cache-dir poetry=="${POETRY_VERSION}" && \
-    poetry config virtualenvs.options.no-pip true && \
-    poetry config virtualenvs.options.no-setuptools true
+    poetry config virtualenvs.options.no-pip true
 
 COPY --chown=1001:0 ./app/pyproject.toml ./app/poetry.lock /opt/app-root/src/project/app/
 
