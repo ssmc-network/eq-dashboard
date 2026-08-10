@@ -3,8 +3,8 @@
   "layout": {
     "id": "line-a",
     "name": "Line A",
-    "width": 620,
-    "height": 420
+    "width": 1920,
+    "height": 1080
   },
   "items": [
     { "id": "m1", "label": "搬送機A", "x": 60, "y": 60, "w": 60, "h": 300, "tagId": "run_state_a" },
