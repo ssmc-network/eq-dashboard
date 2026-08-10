@@ -85,16 +85,27 @@
       const scale = Math.min(availableWidth / canvasEl.offsetWidth, availableHeight / canvasEl.offsetHeight);
       canvasEl.style.transform = `scale(${scale})`;
 
-      // 全画面表示はビューポート全体が背景になるため、キャンバスの縦横比と
-      // 合わない分の余白(レターボックス)が出ても違和感は無い。通常表示は
-      // wrap自体が枠付きのパネルなので、この余白がそのまま「使われていない
-      // 箱」に見えてしまう — wrapの実寸をscale後のキャンバスに合わせて
-      // 縮め、余白を無くす。
+      // targetは#dashboard-canvas-wrapのflexアイテム。transformは見た目だけを
+      // 縮めるため、targetのサイズを明示的に指定しないと、flexアイテムの
+      // 幅はflex-shrinkで縮められても(横方向)、高さ(align-items:centerの
+      // 交差軸)はcanvasEl本来の実寸(1920×1080)のまま残ってしまい、
+      // ラップからはみ出して意図しないスクロールが発生する
+      // (縦横比がラップ領域と合わずscaleが高さ基準で決まる場合に顕在化する)。
+      // scale後の実寸を明示的にセットして両軸とも正しく縮める。
+      target.style.width = `${canvasEl.offsetWidth * scale}px`;
+      target.style.height = `${canvasEl.offsetHeight * scale}px`;
+
+      // wrapの幅は常に.mainいっぱい(ブラウザの右端まで)を維持する —
+      // 全画面表示と同じく「画面の端まで使う」見た目にするため、キャンバスの
+      // 縦横比の都合で余る分は(ページ背景ではなく)wrapの背景を使った
+      // レターボックスとして内側に収める。高さだけはscale後の実寸に
+      // 合わせて縮める — 高さも常にmax-height分を確保すると、キャンバスの
+      // 縦横比が横長(このアプリの想定=16:9)な場合に上下に大きな空白の
+      // 箱がそのまま残ってしまうため(幅は横長キャンバスなら概ね使い切る
+      // ので同じ問題が起きにくい)。
       if (!isFullscreen()) {
         const style = window.getComputedStyle(fullscreenWrap);
-        const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
         const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-        fullscreenWrap.style.width = `${canvasEl.offsetWidth * scale + paddingX}px`;
         fullscreenWrap.style.height = `${canvasEl.offsetHeight * scale + paddingY}px`;
       }
     }
