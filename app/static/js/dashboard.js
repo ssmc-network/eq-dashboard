@@ -85,6 +85,16 @@
       const scale = Math.min(availableWidth / canvasEl.offsetWidth, availableHeight / canvasEl.offsetHeight);
       canvasEl.style.transform = `scale(${scale})`;
 
+      // targetは#dashboard-canvas-wrapのflexアイテム。transformは見た目だけを
+      // 縮めるため、targetのサイズを明示的に指定しないと、flexアイテムの
+      // 幅はflex-shrinkで縮められても(横方向)、高さ(align-items:centerの
+      // 交差軸)はcanvasEl本来の実寸(1920×1080)のまま残ってしまい、
+      // ラップからはみ出して意図しないスクロールが発生する
+      // (縦横比がラップ領域と合わずscaleが高さ基準で決まる場合に顕在化する)。
+      // scale後の実寸を明示的にセットして両軸とも正しく縮める。
+      target.style.width = `${canvasEl.offsetWidth * scale}px`;
+      target.style.height = `${canvasEl.offsetHeight * scale}px`;
+
       // 全画面表示はビューポート全体が背景になるため、キャンバスの縦横比と
       // 合わない分の余白(レターボックス)が出ても違和感は無い。通常表示は
       // wrap自体が枠付きのパネルなので、この余白がそのまま「使われていない

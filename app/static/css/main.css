@@ -573,6 +573,19 @@ button {
   max-height: calc(100vh - var(--topbar-height) - 8rem);
 }
 
+/* #dashboard-itemsはこのflexコンテナの直接の子(flexアイテム)。flexアイテムは
+   デフォルトの`min-width/height: auto`により、中の.dashboard-canvas(transform
+   適用前の実寸1920×1080)より小さく縮めない — transformは見た目だけを縮める
+   ため、この「自動最小サイズ」はtransform前の実寸を基準にしてしまい、
+   キャンバスの縦横比がラップ領域と合わない場合(高さが制約になる場合など)に
+   キャンバス側が視覚的に縮んでいてもこのflexアイテムだけ縮まずラップから
+   水平/垂直にはみ出し、意図しないスクロールバーが出る。flexアイテムの
+   自動最小サイズを無効化して、必要な分だけ縮められるようにする。 */
+#dashboard-canvas-wrap > #dashboard-items {
+  min-width: 0;
+  min-height: 0;
+}
+
 /* キャンバスは簡易図面の用紙。ライトは白紙、ダークは--diagram-canvas-bgの
    暗めの紙に切り替わる(装置の状態色そのものはテーマに関わらず固定)。 */
 .dashboard-canvas {
@@ -580,6 +593,15 @@ button {
   background: var(--diagram-canvas-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  /* dashboard.jsが#dashboard-items(このキャンバスの親、flexアイテム)の
+     width/heightをscale後の実寸に明示的に合わせている。transform-originの
+     デフォルト(中央)だと、このキャンバス自身の(縮小前の)中心を基準に
+     縮小されるため、#dashboard-itemsの(縮小後の、より小さい)中心とズレて
+     右・下にはみ出してしまう。transform-originを左上に固定することで、
+     キャンバスは自身の左上(=#dashboard-itemsの左上と常に一致する、
+     通常フローの唯一の子であるため)を基準に縮小され、結果として
+     scale後の実サイズが#dashboard-itemsの実サイズと正確に一致する。 */
+  transform-origin: top left;
 }
 
 /* 全画面表示: #dashboard-canvas-wrapをFullscreen APIの対象にする(auto-refreshで
@@ -603,7 +625,6 @@ button {
 }
 
 #dashboard-canvas-wrap:fullscreen .dashboard-canvas {
-  transform-origin: center center;
   border: none;
 }
 
