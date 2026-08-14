@@ -17,6 +17,7 @@
     <input type="text" id="meta-name" value="{{ layout.layout.name }}" placeholder="{{ t('layout_editor.field_name_placeholder') }}">
   </label>
   <button type="button" id="add-item-btn" class="btn">{{ t("layout_editor.add_item") }}</button>
+  <button type="button" id="add-divider-btn" class="btn">{{ t("layout_editor.add_divider") }}</button>
   <button type="button" id="save-btn" class="btn btn--accent">{{ t("layout_editor.save_to_server") }}</button>
   <button type="button" id="download-btn" class="btn">{{ t("layout_editor.download_json") }}</button>
   <div class="toolbar-field zoom-field">
@@ -44,7 +45,7 @@
     <p class="editor-panel__empty" id="editor-panel-empty">{{ t("layout_editor.panel_empty") }}</p>
     <div class="editor-panel__form" id="editor-panel-form" hidden>
       <label>{{ t("layout_editor.field_label") }}<input type="text" id="item-label"></label>
-      <label>{{ t("layout_editor.field_tag_id") }}<input type="text" id="item-tag-id"></label>
+      <label id="item-tag-id-row">{{ t("layout_editor.field_tag_id") }}<input type="text" id="item-tag-id"></label>
       <div class="editor-panel__grid">
         <label>{{ t("layout_editor.field_x") }}<input type="number" id="item-x"></label>
         <label>{{ t("layout_editor.field_y") }}<input type="number" id="item-y"></label>

@@ -27,6 +27,7 @@ class DashboardBox:
     y: int
     w: int
     h: int
+    type: str
     status_value: str
     status_label: str
     updated_at: datetime
@@ -51,6 +52,7 @@ def get_dashboard(layout_id: str, lang: str = DEFAULT_LANGUAGE) -> tuple[LayoutD
                 y=item.y,
                 w=item.w,
                 h=item.h,
+                type=item.type,
                 status_value=value,
                 status_label=translate(key, lang) if key else value,
                 updated_at=updated_at,

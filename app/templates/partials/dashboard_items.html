@@ -1,9 +1,15 @@
 <div class="dashboard-canvas" style="width: {{ layout.layout.width }}px; height: {{ layout.layout.height }}px;">
   {% for box in boxes %}
+  {% if box.type == "divider" %}
+  <div class="eq-box eq-box--divider"
+       style="left: {{ box.x }}px; top: {{ box.y }}px; width: {{ box.w }}px; height: {{ box.h }}px;"
+       title="{{ box.label }}"></div>
+  {% else %}
   <div class="eq-box eq-box--{{ box.status_value }}"
        style="left: {{ box.x }}px; top: {{ box.y }}px; width: {{ box.w }}px; height: {{ box.h }}px;"
        title="{{ box.label }} / {{ box.status_label }} / {{ t('dashboard.updated_at_label') }}: {{ box.updated_at.strftime('%H:%M:%S') }}">
     <span class="eq-box__label">{{ box.label }}</span>
   </div>
+  {% endif %}
   {% endfor %}
 </div>

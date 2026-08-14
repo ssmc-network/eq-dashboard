@@ -11,7 +11,9 @@ def test_layout_definition_round_trips_camel_case_alias() -> None:
     raw = {
         "schemaVersion": "1.0",
         "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
-        "items": [{"id": "m1", "label": "Pump", "x": 1, "y": 2, "w": 3, "h": 4, "tagId": "tag-a"}],
+        "items": [
+            {"id": "m1", "label": "Pump", "x": 1, "y": 2, "w": 3, "h": 4, "tagId": "tag-a", "type": "equipment"}
+        ],
     }
     layout = LayoutDefinition.model_validate(raw)
 
@@ -158,6 +160,66 @@ def test_layout_rejects_duplicate_non_blank_tag_id() -> None:
                 "items": [
                     {"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": "tag-a"},
                     {"id": "m2", "label": "Valve", "x": 20, "y": 20, "w": 10, "h": 10, "tagId": "tag-a"},
+                ],
+            }
+        )
+
+
+def test_layout_item_defaults_type_to_equipment_for_backward_compatibility() -> None:
+    """`type`フィールド追加前に保存された既存のレイアウトJSONを引き続き読み込めることの確認。"""
+    layout = LayoutDefinition.model_validate(
+        {
+            "schemaVersion": "1.0",
+            "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+            "items": [{"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": "tag-a"}],
+        }
+    )
+
+    assert layout.items[0].type == "equipment"
+
+
+def test_layout_item_accepts_divider_type() -> None:
+    layout = LayoutDefinition.model_validate(
+        {
+            "schemaVersion": "1.0",
+            "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+            "items": [{"id": "d1", "label": "Wall", "x": 0, "y": 0, "w": 200, "h": 4, "tagId": "", "type": "divider"}],
+        }
+    )
+
+    assert layout.items[0].type == "divider"
+
+
+def test_layout_item_rejects_divider_with_tag_id() -> None:
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+                "items": [
+                    {
+                        "id": "d1",
+                        "label": "Wall",
+                        "x": 0,
+                        "y": 0,
+                        "w": 200,
+                        "h": 4,
+                        "tagId": "tag-a",
+                        "type": "divider",
+                    }
+                ],
+            }
+        )
+
+
+def test_layout_item_rejects_unknown_type() -> None:
+    with pytest.raises(ValidationError):
+        LayoutDefinition.model_validate(
+            {
+                "schemaVersion": "1.0",
+                "layout": {"id": "line-a", "name": "Line A", "width": 900, "height": 420},
+                "items": [
+                    {"id": "m1", "label": "Pump", "x": 0, "y": 0, "w": 10, "h": 10, "tagId": "", "type": "wall"}
                 ],
             }
         )
