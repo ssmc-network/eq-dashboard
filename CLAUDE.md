@@ -118,10 +118,11 @@ CSS(`static/css/main.css`)は `@media (prefers-color-scheme: dark)` と `:root[d
 
 3機能まとめての変更は範囲(JS・スキーマ・ダッシュボード表示・データ互換性)が大きいため、セッションを分けて段階的に実装する。各セッション完了後、このリストのチェック状態を更新すること。
 
-- [ ] **セッション1: 複数選択 + 位置揃え**(`static/js/layout_editor.js`、`templates/pages/layout_editor.html`、`static/css/main.css`、i18n、スキーマ変更なし)
+- [x] **セッション1: 複数選択 + 位置揃え**(`static/js/layout_editor.js`、`templates/pages/layout_editor.html`、`static/css/main.css`、i18n、スキーマ変更なし)
   - 現状の単一選択(`selectedId`)を複数選択(`selectedIds`、Set)に拡張。Shift+クリックで選択のトグル、Shiftなしクリックは単一選択に置き換え。複数選択中のドラッグは選択中の装置全体を一緒に移動させる。
   - ツールバーに位置揃えボタンを6種追加(2件以上選択時のみ活性化): 左揃え/右揃え/上揃え/下揃え/水平中央揃え/垂直中央揃え。揃え先は選択装置群のバウンディングボックス基準(Figma等と同じ考え方。特定の1件を基準にする「アンカー」概念は導入しない)。
   - サイドパネルは1件選択時は既存の編集フォーム、2件以上選択時は「N件選択中」+位置揃えボタン+一括削除、0件選択時は既存の空表示、の3状態に分岐する。
+  - **実装中に発見・修正した既存バグ**: `.editor-panel__form`(および他のいくつかの要素)は`display: flex`をauthor CSSで無条件指定しており、HTMLの`hidden`属性が本来頼っているUAスタイルシートの`[hidden] { display: none }`をCSSのcascade(author originはUA originより常に優先される。specificityでは同点でも関係ない)により無効化してしまっていた。これは複数選択パネルを追加する以前から存在した潜在バグで、単一選択フォームが実際には常にDOM上表示されたままになっていた(Playwrightでの動作確認中に発覚)。`main.css`のリセット節に `[hidden] { display: none !important; }` を追加して解消(個別クラスに`:not([hidden])`を足して回る代わりに一括対応)。`hidden`属性とauthorのdisplay指定を併用する箇所を今後追加する際は、この防御ルールが効くことを前提にしてよい。
 - [ ] **セッション2: コピペ**(セッション1の複数選択を再利用。スキーマ変更なし)
   - Ctrl+C/Cmd+Cで選択中の装置(複数可)をJS変数上のクリップボードにコピー(OSクリップボードAPIは使わない — エディタ内で完結する用途のみのため)。フォーカスが`<input>`/`<textarea>`にある間はブラウザ標準のコピペを優先し、ショートカットを奪わないようガードすること。
   - Ctrl+V/Cmd+Vで新規idを振って少しオフセットした位置に貼り付け、貼り付けた装置群を新たな選択状態にする。

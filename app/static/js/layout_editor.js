@@ -14,7 +14,10 @@
   };
   let originalId = initial.layout.id || "";
   let nextSeq = state.items.length + 1;
-  let selectedId = null;
+  // 複数選択に対応するため、単一idではなくSetで選択状態を持つ。
+  // 1件だけ選択されている場合はプロパティパネルの編集フォームを、
+  // 2件以上ならバウンディングボックス基準の位置揃えパネルを表示する。
+  let selectedIds = new Set();
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
@@ -41,6 +44,8 @@
 
   const panelEmpty = document.getElementById("editor-panel-empty");
   const panelForm = document.getElementById("editor-panel-form");
+  const panelMulti = document.getElementById("editor-panel-multi");
+  const multiCountEl = document.getElementById("editor-panel-multi-count");
   const fieldLabel = document.getElementById("item-label");
   const fieldTagId = document.getElementById("item-tag-id");
   const fieldX = document.getElementById("item-x");
@@ -48,9 +53,29 @@
   const fieldW = document.getElementById("item-w");
   const fieldH = document.getElementById("item-h");
   const deleteBtn = document.getElementById("delete-item-btn");
+  const deleteMultiBtn = document.getElementById("delete-multi-btn");
+  const alignButtons = {
+    left: document.getElementById("align-left-btn"),
+    "center-x": document.getElementById("align-center-x-btn"),
+    right: document.getElementById("align-right-btn"),
+    top: document.getElementById("align-top-btn"),
+    "center-y": document.getElementById("align-center-y-btn"),
+    bottom: document.getElementById("align-bottom-btn"),
+  };
 
   function findItem(id) {
     return state.items.find((it) => it.id === id) || null;
+  }
+
+  function selectedItems() {
+    return state.items.filter((it) => selectedIds.has(it.id));
+  }
+
+  // ちょうど1件だけ選択されている場合のみ、そのアイテムを返す
+  // (プロパティパネルの単一編集フォームが対象とするアイテム)。
+  function primaryItem() {
+    if (selectedIds.size !== 1) return null;
+    return findItem(Array.from(selectedIds)[0]);
   }
 
   function renderCanvasSize() {
@@ -137,7 +162,7 @@
     canvas.innerHTML = "";
     state.items.forEach((item) => {
       const box = document.createElement("div");
-      box.className = "eq-editable-box" + (item.id === selectedId ? " is-selected" : "");
+      box.className = "eq-editable-box" + (selectedIds.has(item.id) ? " is-selected" : "");
       box.dataset.itemId = item.id;
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
@@ -153,7 +178,22 @@
       handle.className = "eq-editable-box__resize-handle";
       box.appendChild(handle);
 
-      box.addEventListener("pointerdown", (e) => startDrag(e, item, box));
+      box.addEventListener("pointerdown", (e) => {
+        // Shift+クリックは選択のトグルのみ(ドラッグは開始しない)。
+        if (e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSelect(item.id);
+          return;
+        }
+        // 既に複数選択の一部になっている装置をそのままドラッグした場合は
+        // 選択集合を維持して全体を一緒に動かす。未選択の装置をドラッグした
+        // 場合は単一選択に切り替えてから動かす。
+        if (!selectedIds.has(item.id)) {
+          selectOnly(item.id);
+        }
+        startDrag(e, item, box);
+      });
       handle.addEventListener("pointerdown", (e) => startResize(e, item, box));
 
       canvas.appendChild(box);
@@ -167,47 +207,87 @@
   // 選択状態の切り替えはDOMを作り直さず、クラスの付け替えだけで済ませる。
   function highlightSelection() {
     canvas.querySelectorAll(".eq-editable-box").forEach((box) => {
-      box.classList.toggle("is-selected", box.dataset.itemId === selectedId);
+      box.classList.toggle("is-selected", selectedIds.has(box.dataset.itemId));
     });
   }
 
-  function select(id) {
-    selectedId = id;
-    const item = findItem(id);
-    if (!item) {
+  // プロパティパネルは選択件数で3状態に分岐する: 0件(空表示) / 1件(編集フォーム) /
+  // 2件以上(位置揃え・一括削除パネル)。選択状態そのもの(selectedIds)の更新は
+  // 呼び出し側(selectOnly/toggleSelect)が担い、この関数は表示の同期のみを行う。
+  function renderSelectionPanel() {
+    const item = primaryItem();
+    if (selectedIds.size === 0) {
       panelEmpty.hidden = false;
       panelForm.hidden = true;
-      highlightSelection();
-      return;
+      panelMulti.hidden = true;
+    } else if (item) {
+      panelEmpty.hidden = true;
+      panelForm.hidden = false;
+      panelMulti.hidden = true;
+      fieldLabel.value = item.label;
+      fieldTagId.value = item.tagId;
+      fieldX.value = item.x;
+      fieldY.value = item.y;
+      fieldW.value = item.w;
+      fieldH.value = item.h;
+    } else {
+      panelEmpty.hidden = true;
+      panelForm.hidden = true;
+      panelMulti.hidden = false;
+      multiCountEl.textContent = t("layout_editor.multi_selected", { count: selectedIds.size });
     }
-    panelEmpty.hidden = true;
-    panelForm.hidden = false;
-    fieldLabel.value = item.label;
-    fieldTagId.value = item.tagId;
-    fieldX.value = item.x;
-    fieldY.value = item.y;
-    fieldW.value = item.w;
-    fieldH.value = item.h;
+  }
+
+  function selectOnly(id) {
+    selectedIds = id === null ? new Set() : new Set([id]);
+    renderSelectionPanel();
+    highlightSelection();
+  }
+
+  function toggleSelect(id) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    renderSelectionPanel();
     highlightSelection();
   }
 
   function startDrag(e, item, box) {
     e.preventDefault();
     e.stopPropagation();
-    select(item.id);
+    // 複数選択中にその一員をドラッグした場合は選択されている全装置を対象に、
+    // そうでなければドラッグ対象の1件だけを対象にする。
+    const ids = selectedIds.has(item.id) && selectedIds.size > 1 ? new Set(selectedIds) : new Set([item.id]);
     const startX = e.clientX;
     const startY = e.clientY;
-    const originX = item.x;
-    const originY = item.y;
+    const origins = new Map();
+    ids.forEach((id) => {
+      const it = findItem(id);
+      if (it) origins.set(id, { x: it.x, y: it.y });
+    });
 
     // ドラッグ中のマウス移動量(画面px)はズーム倍率で割ってキャンバス座標系に
-    // 変換する(scale()は見た目だけを縮小・拡大するため)。
+    // 変換する(scale()は見た目だけを縮小・拡大するため)。renderItems()による
+    // DOM再構築はここでは行わず(上記コメント参照)、対象各要素のstyleを
+    // 直接書き換える。
     function onMove(ev) {
-      item.x = Math.max(0, Math.round(originX + (ev.clientX - startX) / zoom));
-      item.y = Math.max(0, Math.round(originY + (ev.clientY - startY) / zoom));
-      box.style.left = `${item.x}px`;
-      box.style.top = `${item.y}px`;
-      if (selectedId === item.id) {
+      const dx = (ev.clientX - startX) / zoom;
+      const dy = (ev.clientY - startY) / zoom;
+      ids.forEach((id) => {
+        const it = findItem(id);
+        const origin = origins.get(id);
+        if (!it || !origin) return;
+        it.x = Math.max(0, Math.round(origin.x + dx));
+        it.y = Math.max(0, Math.round(origin.y + dy));
+        const el = id === item.id ? box : canvas.querySelector(`[data-item-id="${id}"]`);
+        if (el) {
+          el.style.left = `${it.x}px`;
+          el.style.top = `${it.y}px`;
+        }
+      });
+      if (selectedIds.size === 1 && selectedIds.has(item.id)) {
         fieldX.value = item.x;
         fieldY.value = item.y;
       }
@@ -225,7 +305,8 @@
   function startResize(e, item, box) {
     e.preventDefault();
     e.stopPropagation();
-    select(item.id);
+    // リサイズは常に単一の装置が対象なので、複数選択中でもこの1件に絞る。
+    selectOnly(item.id);
     const startX = e.clientX;
     const startY = e.clientY;
     const originW = item.w;
@@ -236,7 +317,7 @@
       item.h = Math.max(20, Math.round(originH + (ev.clientY - startY) / zoom));
       box.style.width = `${item.w}px`;
       box.style.height = `${item.h}px`;
-      if (selectedId === item.id) {
+      if (selectedIds.has(item.id)) {
         fieldW.value = item.w;
         fieldH.value = item.h;
       }
@@ -251,13 +332,55 @@
     document.addEventListener("pointerup", onUp);
   }
 
+  function alignSelected(mode) {
+    const items = selectedItems();
+    if (items.length < 2) return;
+    const minX = Math.min(...items.map((it) => it.x));
+    const maxRight = Math.max(...items.map((it) => it.x + it.w));
+    const minY = Math.min(...items.map((it) => it.y));
+    const maxBottom = Math.max(...items.map((it) => it.y + it.h));
+    const centerX = (minX + maxRight) / 2;
+    const centerY = (minY + maxBottom) / 2;
+
+    items.forEach((it) => {
+      switch (mode) {
+        case "left":
+          it.x = minX;
+          break;
+        case "right":
+          it.x = maxRight - it.w;
+          break;
+        case "top":
+          it.y = minY;
+          break;
+        case "bottom":
+          it.y = maxBottom - it.h;
+          break;
+        case "center-x":
+          it.x = centerX - it.w / 2;
+          break;
+        case "center-y":
+          it.y = centerY - it.h / 2;
+          break;
+      }
+      it.x = Math.max(0, Math.round(it.x));
+      it.y = Math.max(0, Math.round(it.y));
+    });
+    renderItems();
+    highlightSelection();
+  }
+
+  Object.keys(alignButtons).forEach((mode) => {
+    alignButtons[mode].addEventListener("click", () => alignSelected(mode));
+  });
+
   canvas.addEventListener("pointerdown", (e) => {
-    if (e.target === canvas) select(null);
+    if (e.target === canvas) selectOnly(null);
   });
 
   function bindField(el, key, isNumber) {
     el.addEventListener("input", () => {
-      const item = findItem(selectedId);
+      const item = primaryItem();
       if (!item) return;
       item[key] = isNumber ? Math.round(Number(el.value) || 0) : el.value;
       renderItems();
@@ -271,20 +394,27 @@
   bindField(fieldH, "h", true);
 
   deleteBtn.addEventListener("click", () => {
-    state.items = state.items.filter((it) => it.id !== selectedId);
+    const item = primaryItem();
+    if (!item) return;
+    state.items = state.items.filter((it) => it.id !== item.id);
     renderStatus();
-    selectedId = null;
     renderItems();
-    select(null);
+    selectOnly(null);
+  });
+
+  deleteMultiBtn.addEventListener("click", () => {
+    state.items = state.items.filter((it) => !selectedIds.has(it.id));
+    renderStatus();
+    renderItems();
+    selectOnly(null);
   });
 
   addBtn.addEventListener("click", () => {
     const id = `item-${nextSeq++}`;
     state.items.push({ id, label: t("layout_editor.new_item_label"), x: 40, y: 40, w: 120, h: 80, tagId: "" });
     renderStatus();
-    selectedId = id;
     renderItems();
-    select(id);
+    selectOnly(id);
   });
 
   metaId.addEventListener("input", () => {
@@ -397,4 +527,5 @@
   renderCanvasSize();
   renderItems();
   renderStatus();
+  renderSelectionPanel();
 })();
