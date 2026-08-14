@@ -1,7 +1,9 @@
 (function () {
   const TRANSLATIONS = {
     "layout_editor.item_count": { ja: "{count}件の装置", en: "{count} equipment" },
+    "layout_editor.multi_selected": { ja: "{count}件選択中", en: "{count} selected" },
     "layout_editor.new_item_label": { ja: "新規装置", en: "New Equipment" },
+    "layout_editor.new_divider_label": { ja: "区切り線", en: "Divider" },
     "layout_editor.no_label": { ja: "(ラベル未設定)", en: "(no label)" },
     "layout_editor.saving": { ja: "保存中...", en: "Saving..." },
     "layout_editor.save_ok": { ja: "✓ サーバーに保存しました({id})", en: "✓ Saved to server ({id})" },

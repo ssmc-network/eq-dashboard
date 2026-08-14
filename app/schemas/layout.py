@@ -1,4 +1,5 @@
 import re
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -9,7 +10,11 @@ _SAFE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class LayoutItem(BaseModel):
-    """フロア上に配置される装置図形。タグ経由で状態と紐づく。"""
+    """フロア上に配置される図形。`type="equipment"`はタグ経由で状態と紐づく装置、
+    `type="divider"`は部屋の区切りなどを表す線(装置ボックスの仕組みをそのまま
+    再利用した細い矩形。稼働状態を持たず、独自の描画モデルは持たない)。
+    既存の保存済みJSONには`type`フィールドが無いため、デフォルトで`equipment`
+    として後方互換に読み込む。"""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -20,6 +25,13 @@ class LayoutItem(BaseModel):
     w: int = Field(gt=0)
     h: int = Field(gt=0)
     tag_id: str = Field(alias="tagId")
+    type: Literal["equipment", "divider"] = "equipment"
+
+    @model_validator(mode="after")
+    def _divider_has_no_tag(self) -> "LayoutItem":
+        if self.type == "divider" and self.tag_id:
+            raise ValueError("区切り線にはtagIdを設定できません。")
+        return self
 
 
 class LayoutMeta(BaseModel):

@@ -114,4 +114,24 @@ CSS(`static/css/main.css`)は `@media (prefers-color-scheme: dark)` と `:root[d
 
 **ダッシュボードのキャンバス表示は常時scale-to-fitする**(レイアウト編集は対象外): `static/js/dashboard.js`が`.dashboard-canvas`(絶対座標は不変)に`transform: scale()`を適用し、`#dashboard-canvas-wrap`のクライアント領域(パディング分を除く)にアスペクト比を保ったまま収める。全画面表示時と同じ仕組みを通常表示にも拡張したもので、画面の空きスペースを有効活用するため。ラップは`display:flex;align-items:center;justify-content:center;`でキャンバスを中央寄せしており、transformのデフォルト原点(中心)と組み合わさることで、縦横比が合わない場合も余白が均等になる。ウィンドウのリサイズだけでなく、サイドバー折りたたみ(ウィンドウ幅は変わらずラップの幅だけ変わる)でも再計算が必要なため、`window`の`resize`イベントではなく`ResizeObserver`でラップ要素自体の寸法変化を監視している(同じ理由でレイアウト編集画面のミニマップ表示判定も`ResizeObserver`に統一している)。レイアウト編集画面は絶対座標での位置決めがそのまま編集精度に直結するため、自動スケールは行わず既存の手動ズームに委ねている。
 
+## 実装予定タスク: レイアウト編集の機能拡張(位置揃え・区切り線・コピペ)
+
+3機能まとめての変更は範囲(JS・スキーマ・ダッシュボード表示・データ互換性)が大きいため、セッションを分けて段階的に実装する。各セッション完了後、このリストのチェック状態を更新すること。
+
+- [x] **セッション1: 複数選択 + 位置揃え**(`static/js/layout_editor.js`、`templates/pages/layout_editor.html`、`static/css/main.css`、i18n、スキーマ変更なし)
+  - 現状の単一選択(`selectedId`)を複数選択(`selectedIds`、Set)に拡張。Shift+クリックで選択のトグル、Shiftなしクリックは単一選択に置き換え。複数選択中のドラッグは選択中の装置全体を一緒に移動させる。
+  - ツールバーに位置揃えボタンを6種追加(2件以上選択時のみ活性化): 左揃え/右揃え/上揃え/下揃え/水平中央揃え/垂直中央揃え。揃え先は選択装置群のバウンディングボックス基準(Figma等と同じ考え方。特定の1件を基準にする「アンカー」概念は導入しない)。
+  - サイドパネルは1件選択時は既存の編集フォーム、2件以上選択時は「N件選択中」+位置揃えボタン+一括削除、0件選択時は既存の空表示、の3状態に分岐する。
+  - **実装中に発見・修正した既存バグ**: `.editor-panel__form`(および他のいくつかの要素)は`display: flex`をauthor CSSで無条件指定しており、HTMLの`hidden`属性が本来頼っているUAスタイルシートの`[hidden] { display: none }`をCSSのcascade(author originはUA originより常に優先される。specificityでは同点でも関係ない)により無効化してしまっていた。これは複数選択パネルを追加する以前から存在した潜在バグで、単一選択フォームが実際には常にDOM上表示されたままになっていた(Playwrightでの動作確認中に発覚)。`main.css`のリセット節に `[hidden] { display: none !important; }` を追加して解消(個別クラスに`:not([hidden])`を足して回る代わりに一括対応)。`hidden`属性とauthorのdisplay指定を併用する箇所を今後追加する際は、この防御ルールが効くことを前提にしてよい。
+- [x] **セッション2: コピペ**(セッション1の複数選択を再利用。スキーマ変更なし)
+  - Ctrl+C/Cmd+Cで選択中の装置(複数可)をJS変数上のクリップボードにコピー(OSクリップボードAPIは使わない — エディタ内で完結する用途のみのため)。フォーカスが`<input>`/`<textarea>`にある間はブラウザ標準のコピペを優先し、ショートカットを奪わないようガードすること。
+  - Ctrl+V/Cmd+Vで新規idを振って少しオフセットした位置に貼り付け、貼り付けた装置群を新たな選択状態にする。連続でCtrl+Vを押すと(再コピーしない限り)オフセットが段階的に大きくなり、貼り付けるたびに完全に重ならないようにしている(`PASTE_OFFSET * pasteCount`)。
+  - `tagId`はコピーしない — 貼り付けた複製をそのまま保存すると同一`tagId`の重複でサーバー側バリデーションに弾かれるため、他の未割り当て装置と同様「空」の状態で複製し、必要なら手動で割り当てる運用にした。
+- [x] **セッション3: 区切り線**(スキーマ変更・ダッシュボード表示・インポート/エクスポート・タグ使用状況スキャンに影響あり)
+  - 新しい描画モデルを作らず、既存の装置ボックス(ドラッグ・リサイズ・保存・削除の仕組み)を再利用する方針。`schemas/layout.py`の`LayoutItem`に`type`フィールド(`Literal["equipment", "divider"]`、デフォルト`"equipment"`)を追加。区切り線は「細い矩形」として配置し(初期値w=200,h=4)、既存のリサイズ操作で長さを調整する(斜め線は非対応)。リサイズの最小サイズは装置の20pxのまま維持すると細線を維持できないため、`type==="divider"`の場合のみ最小2pxに緩和した。
+  - `type=="divider"`かつ`tagId`が非空の組み合わせは`model_validator`で拒否(区切り線はタグ・稼働状態と無関係)。エディタ側もプロパティパネルの`tagId`欄自体を区切り線選択時は非表示にする。`tag_mapping_service.get_tag_usage()`は元々`tagId`が空のアイテムをスキップする実装だったため、追加の分岐なしでそのまま区切り線を無視する。
+  - `status_service.DashboardBox`に`type`を追加して`layout.items`からそのまま伝播。`templates/partials/dashboard_items.html`は`box.type == "divider"`で分岐し、区切り線は状態色クラス・ラベル・ツールチップの稼働状態情報を持たない単色バー(`--diagram-ink`で塗る、CSS `.eq-box--divider`)として描画する。
+  - `import_export_service`は`LayoutDefinition.model_validate`を素通しするだけの実装だったため変更不要(Pydanticが新フィールドをそのまま扱う)。既存の保存済みレイアウトJSONに`type`が無い場合はデフォルト値`"equipment"`で後方互換に読み込まれることをテストで確認済み。
+  - エディタの複数選択・位置揃え・コピペ(セッション1・2)は`x/y/w/h`のみを扱う汎用的な実装だったため、区切り線に対しても追加コードなしでそのまま動作する(コピペのクリップボードには`type`を含めるよう修正し、複製時も種別が引き継がれるようにした)。
+
 **多言語対応(日本語/英語)**: `core/i18n.py` の `TRANSLATIONS`(キー→`{"ja": ..., "en": ...}` のフラットな辞書)が翻訳の唯一の情報源。`language` Cookie(未設定時は `ja` にフォールバック、`get_language(request)`)で現在の言語を判定する。Jinja2テンプレート側は `{{ t("key") }}`(`{{ t("key", count=3) }}` のようにキーワード引数で `str.format` プレースホルダーを埋められる)、JS側は `static/js/i18n.js` が公開する `window.t(key, params)` を使う(HTML側のキーと同じ命名規則だが、辞書は別に持っている — サーバー再起動なしでブラウザだけで動くJSの都合上、Python側の辞書をそのままJSへ渡す仕組みは用意していない。キーを追加・変更したら両方を更新すること)。JSは `document.documentElement.lang`(`base.html` が `<html lang="{{ get_language(request) }}">` としてサーバー側でレンダリングする)を見てja/enを切り替える。`Jinja2Templates` のインスタンスは `main.py` と `routes/ui.py` でそれぞれ独立して作られており、Jinja2の `Environment` もインスタンスごとに別なので、`t`/`get_language` グローバルは `core.i18n.register_i18n_globals(templates)` を**両方の`Jinja2Templates`生成箇所で個別に呼ぶ**必要がある(片方だけ登録すると、そちらのテンプレートだけ `'t' is undefined` になる)。ステータスラベル(`services/status_service.py` の `STATUS_KEYS`)、接続テストのメッセージ(`services/api_test_service.py`)、JSONインポートの解析エラー(`services/import_export_service.py`)は呼び出し元(`routes/ui.py`)から `lang` を明示的に渡す必要がある関数になっている(Jinja2テンプレートの外、サービス層で文字列を組み立てているため)。**翻訳の対象外と決めているもの**: Pydanticバリデータ(`schemas/tag_mapping.py`・`schemas/layout.py`)が送出する `ValueError` の文言、`import_export_service._format_errors` が返すPydanticのフィールドバリデーションエラー本文、構造化アプリケーションログ・アクセスログ(そもそも運用者向けであり日本語UIの対象外)。これらはリクエストの `lang` を受け取れない場所(バリデータのクラスメソッド)で発生するか、そもそもユーザー向けの通常導線ではないため。

@@ -14,7 +14,16 @@
   };
   let originalId = initial.layout.id || "";
   let nextSeq = state.items.length + 1;
-  let selectedId = null;
+  // 複数選択に対応するため、単一idではなくSetで選択状態を持つ。
+  // 1件だけ選択されている場合はプロパティパネルの編集フォームを、
+  // 2件以上ならバウンディングボックス基準の位置揃えパネルを表示する。
+  let selectedIds = new Set();
+  // Ctrl+C/Ctrl+Vのクリップボードはページ内のJS変数のみに保持する
+  // (OSクリップボードAPIは使わない — このエディタ内で完結する用途のみのため)。
+  // idはコピー時点では持たせず、貼り付けのたびに新規発行する。
+  let clipboard = [];
+  let pasteCount = 0;
+  const PASTE_OFFSET = 24;
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
@@ -25,6 +34,7 @@
   const metaWidth = document.getElementById("meta-width");
   const metaHeight = document.getElementById("meta-height");
   const addBtn = document.getElementById("add-item-btn");
+  const addDividerBtn = document.getElementById("add-divider-btn");
   const saveBtn = document.getElementById("save-btn");
   const downloadBtn = document.getElementById("download-btn");
   const statusEl = document.getElementById("editor-status");
@@ -41,16 +51,39 @@
 
   const panelEmpty = document.getElementById("editor-panel-empty");
   const panelForm = document.getElementById("editor-panel-form");
+  const panelMulti = document.getElementById("editor-panel-multi");
+  const multiCountEl = document.getElementById("editor-panel-multi-count");
   const fieldLabel = document.getElementById("item-label");
   const fieldTagId = document.getElementById("item-tag-id");
+  const fieldTagIdRow = document.getElementById("item-tag-id-row");
   const fieldX = document.getElementById("item-x");
   const fieldY = document.getElementById("item-y");
   const fieldW = document.getElementById("item-w");
   const fieldH = document.getElementById("item-h");
   const deleteBtn = document.getElementById("delete-item-btn");
+  const deleteMultiBtn = document.getElementById("delete-multi-btn");
+  const alignButtons = {
+    left: document.getElementById("align-left-btn"),
+    "center-x": document.getElementById("align-center-x-btn"),
+    right: document.getElementById("align-right-btn"),
+    top: document.getElementById("align-top-btn"),
+    "center-y": document.getElementById("align-center-y-btn"),
+    bottom: document.getElementById("align-bottom-btn"),
+  };
 
   function findItem(id) {
     return state.items.find((it) => it.id === id) || null;
+  }
+
+  function selectedItems() {
+    return state.items.filter((it) => selectedIds.has(it.id));
+  }
+
+  // ちょうど1件だけ選択されている場合のみ、そのアイテムを返す
+  // (プロパティパネルの単一編集フォームが対象とするアイテム)。
+  function primaryItem() {
+    if (selectedIds.size !== 1) return null;
+    return findItem(Array.from(selectedIds)[0]);
   }
 
   function renderCanvasSize() {
@@ -137,7 +170,10 @@
     canvas.innerHTML = "";
     state.items.forEach((item) => {
       const box = document.createElement("div");
-      box.className = "eq-editable-box" + (item.id === selectedId ? " is-selected" : "");
+      box.className =
+        "eq-editable-box" +
+        (item.type === "divider" ? " eq-editable-box--divider" : "") +
+        (selectedIds.has(item.id) ? " is-selected" : "");
       box.dataset.itemId = item.id;
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
@@ -153,7 +189,22 @@
       handle.className = "eq-editable-box__resize-handle";
       box.appendChild(handle);
 
-      box.addEventListener("pointerdown", (e) => startDrag(e, item, box));
+      box.addEventListener("pointerdown", (e) => {
+        // Shift+クリックは選択のトグルのみ(ドラッグは開始しない)。
+        if (e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSelect(item.id);
+          return;
+        }
+        // 既に複数選択の一部になっている装置をそのままドラッグした場合は
+        // 選択集合を維持して全体を一緒に動かす。未選択の装置をドラッグした
+        // 場合は単一選択に切り替えてから動かす。
+        if (!selectedIds.has(item.id)) {
+          selectOnly(item.id);
+        }
+        startDrag(e, item, box);
+      });
       handle.addEventListener("pointerdown", (e) => startResize(e, item, box));
 
       canvas.appendChild(box);
@@ -167,47 +218,89 @@
   // 選択状態の切り替えはDOMを作り直さず、クラスの付け替えだけで済ませる。
   function highlightSelection() {
     canvas.querySelectorAll(".eq-editable-box").forEach((box) => {
-      box.classList.toggle("is-selected", box.dataset.itemId === selectedId);
+      box.classList.toggle("is-selected", selectedIds.has(box.dataset.itemId));
     });
   }
 
-  function select(id) {
-    selectedId = id;
-    const item = findItem(id);
-    if (!item) {
+  // プロパティパネルは選択件数で3状態に分岐する: 0件(空表示) / 1件(編集フォーム) /
+  // 2件以上(位置揃え・一括削除パネル)。選択状態そのもの(selectedIds)の更新は
+  // 呼び出し側(selectOnly/toggleSelect)が担い、この関数は表示の同期のみを行う。
+  function renderSelectionPanel() {
+    const item = primaryItem();
+    if (selectedIds.size === 0) {
       panelEmpty.hidden = false;
       panelForm.hidden = true;
-      highlightSelection();
-      return;
+      panelMulti.hidden = true;
+    } else if (item) {
+      panelEmpty.hidden = true;
+      panelForm.hidden = false;
+      panelMulti.hidden = true;
+      // 区切り線はタグ・稼働状態と無関係なので、tagId欄はそもそも見せない。
+      fieldTagIdRow.hidden = item.type === "divider";
+      fieldLabel.value = item.label;
+      fieldTagId.value = item.tagId;
+      fieldX.value = item.x;
+      fieldY.value = item.y;
+      fieldW.value = item.w;
+      fieldH.value = item.h;
+    } else {
+      panelEmpty.hidden = true;
+      panelForm.hidden = true;
+      panelMulti.hidden = false;
+      multiCountEl.textContent = t("layout_editor.multi_selected", { count: selectedIds.size });
     }
-    panelEmpty.hidden = true;
-    panelForm.hidden = false;
-    fieldLabel.value = item.label;
-    fieldTagId.value = item.tagId;
-    fieldX.value = item.x;
-    fieldY.value = item.y;
-    fieldW.value = item.w;
-    fieldH.value = item.h;
+  }
+
+  function selectOnly(id) {
+    selectedIds = id === null ? new Set() : new Set([id]);
+    renderSelectionPanel();
+    highlightSelection();
+  }
+
+  function toggleSelect(id) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    renderSelectionPanel();
     highlightSelection();
   }
 
   function startDrag(e, item, box) {
     e.preventDefault();
     e.stopPropagation();
-    select(item.id);
+    // 複数選択中にその一員をドラッグした場合は選択されている全装置を対象に、
+    // そうでなければドラッグ対象の1件だけを対象にする。
+    const ids = selectedIds.has(item.id) && selectedIds.size > 1 ? new Set(selectedIds) : new Set([item.id]);
     const startX = e.clientX;
     const startY = e.clientY;
-    const originX = item.x;
-    const originY = item.y;
+    const origins = new Map();
+    ids.forEach((id) => {
+      const it = findItem(id);
+      if (it) origins.set(id, { x: it.x, y: it.y });
+    });
 
     // ドラッグ中のマウス移動量(画面px)はズーム倍率で割ってキャンバス座標系に
-    // 変換する(scale()は見た目だけを縮小・拡大するため)。
+    // 変換する(scale()は見た目だけを縮小・拡大するため)。renderItems()による
+    // DOM再構築はここでは行わず(上記コメント参照)、対象各要素のstyleを
+    // 直接書き換える。
     function onMove(ev) {
-      item.x = Math.max(0, Math.round(originX + (ev.clientX - startX) / zoom));
-      item.y = Math.max(0, Math.round(originY + (ev.clientY - startY) / zoom));
-      box.style.left = `${item.x}px`;
-      box.style.top = `${item.y}px`;
-      if (selectedId === item.id) {
+      const dx = (ev.clientX - startX) / zoom;
+      const dy = (ev.clientY - startY) / zoom;
+      ids.forEach((id) => {
+        const it = findItem(id);
+        const origin = origins.get(id);
+        if (!it || !origin) return;
+        it.x = Math.max(0, Math.round(origin.x + dx));
+        it.y = Math.max(0, Math.round(origin.y + dy));
+        const el = id === item.id ? box : canvas.querySelector(`[data-item-id="${id}"]`);
+        if (el) {
+          el.style.left = `${it.x}px`;
+          el.style.top = `${it.y}px`;
+        }
+      });
+      if (selectedIds.size === 1 && selectedIds.has(item.id)) {
         fieldX.value = item.x;
         fieldY.value = item.y;
       }
@@ -225,18 +318,22 @@
   function startResize(e, item, box) {
     e.preventDefault();
     e.stopPropagation();
-    select(item.id);
+    // リサイズは常に単一の装置が対象なので、複数選択中でもこの1件に絞る。
+    selectOnly(item.id);
     const startX = e.clientX;
     const startY = e.clientY;
     const originW = item.w;
     const originH = item.h;
+    // 区切り線は「細い矩形」として使うため、装置(最小20px)より小さい
+    // 最小サイズを許可する(横に伸ばせば横線、縦に伸ばせば縦線になる)。
+    const minSize = item.type === "divider" ? 2 : 20;
 
     function onMove(ev) {
-      item.w = Math.max(20, Math.round(originW + (ev.clientX - startX) / zoom));
-      item.h = Math.max(20, Math.round(originH + (ev.clientY - startY) / zoom));
+      item.w = Math.max(minSize, Math.round(originW + (ev.clientX - startX) / zoom));
+      item.h = Math.max(minSize, Math.round(originH + (ev.clientY - startY) / zoom));
       box.style.width = `${item.w}px`;
       box.style.height = `${item.h}px`;
-      if (selectedId === item.id) {
+      if (selectedIds.has(item.id)) {
         fieldW.value = item.w;
         fieldH.value = item.h;
       }
@@ -251,13 +348,101 @@
     document.addEventListener("pointerup", onUp);
   }
 
+  function alignSelected(mode) {
+    const items = selectedItems();
+    if (items.length < 2) return;
+    const minX = Math.min(...items.map((it) => it.x));
+    const maxRight = Math.max(...items.map((it) => it.x + it.w));
+    const minY = Math.min(...items.map((it) => it.y));
+    const maxBottom = Math.max(...items.map((it) => it.y + it.h));
+    const centerX = (minX + maxRight) / 2;
+    const centerY = (minY + maxBottom) / 2;
+
+    items.forEach((it) => {
+      switch (mode) {
+        case "left":
+          it.x = minX;
+          break;
+        case "right":
+          it.x = maxRight - it.w;
+          break;
+        case "top":
+          it.y = minY;
+          break;
+        case "bottom":
+          it.y = maxBottom - it.h;
+          break;
+        case "center-x":
+          it.x = centerX - it.w / 2;
+          break;
+        case "center-y":
+          it.y = centerY - it.h / 2;
+          break;
+      }
+      it.x = Math.max(0, Math.round(it.x));
+      it.y = Math.max(0, Math.round(it.y));
+    });
+    renderItems();
+    highlightSelection();
+  }
+
+  Object.keys(alignButtons).forEach((mode) => {
+    alignButtons[mode].addEventListener("click", () => alignSelected(mode));
+  });
+
   canvas.addEventListener("pointerdown", (e) => {
-    if (e.target === canvas) select(null);
+    if (e.target === canvas) selectOnly(null);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const active = document.activeElement;
+    // フォーカスがテキスト入力中の場合はブラウザ標準のコピペを優先し、
+    // ショートカットを奪わない(ラベル編集中にCtrl+Cした場合など)。
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+      return;
+    }
+    const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c";
+    const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v";
+
+    if (isCopy) {
+      if (selectedIds.size === 0) return;
+      e.preventDefault();
+      // tagIdはコピーしない — 貼り付け後にそのまま保存すると同一tagIdの重複と
+      // なりサーバー側バリデーションで弾かれるため、他の装置と同様「未割り当て」
+      // の状態で複製し、後から手動で割り当てる運用に合わせる。
+      clipboard = selectedItems().map((it) => ({ label: it.label, x: it.x, y: it.y, w: it.w, h: it.h, type: it.type }));
+      pasteCount = 0;
+    } else if (isPaste) {
+      if (clipboard.length === 0) return;
+      e.preventDefault();
+      pasteCount += 1;
+      const offset = PASTE_OFFSET * pasteCount;
+      const newIds = [];
+      clipboard.forEach((snapshot) => {
+        const id = `item-${nextSeq++}`;
+        state.items.push({
+          id,
+          label: snapshot.label,
+          x: Math.max(0, snapshot.x + offset),
+          y: Math.max(0, snapshot.y + offset),
+          w: snapshot.w,
+          h: snapshot.h,
+          tagId: "",
+          type: snapshot.type,
+        });
+        newIds.push(id);
+      });
+      renderStatus();
+      renderItems();
+      selectedIds = new Set(newIds);
+      renderSelectionPanel();
+      highlightSelection();
+    }
   });
 
   function bindField(el, key, isNumber) {
     el.addEventListener("input", () => {
-      const item = findItem(selectedId);
+      const item = primaryItem();
       if (!item) return;
       item[key] = isNumber ? Math.round(Number(el.value) || 0) : el.value;
       renderItems();
@@ -271,20 +456,53 @@
   bindField(fieldH, "h", true);
 
   deleteBtn.addEventListener("click", () => {
-    state.items = state.items.filter((it) => it.id !== selectedId);
+    const item = primaryItem();
+    if (!item) return;
+    state.items = state.items.filter((it) => it.id !== item.id);
     renderStatus();
-    selectedId = null;
     renderItems();
-    select(null);
+    selectOnly(null);
+  });
+
+  deleteMultiBtn.addEventListener("click", () => {
+    state.items = state.items.filter((it) => !selectedIds.has(it.id));
+    renderStatus();
+    renderItems();
+    selectOnly(null);
   });
 
   addBtn.addEventListener("click", () => {
     const id = `item-${nextSeq++}`;
-    state.items.push({ id, label: t("layout_editor.new_item_label"), x: 40, y: 40, w: 120, h: 80, tagId: "" });
+    state.items.push({
+      id,
+      label: t("layout_editor.new_item_label"),
+      x: 40,
+      y: 40,
+      w: 120,
+      h: 80,
+      tagId: "",
+      type: "equipment",
+    });
     renderStatus();
-    selectedId = id;
     renderItems();
-    select(id);
+    selectOnly(id);
+  });
+
+  addDividerBtn.addEventListener("click", () => {
+    const id = `item-${nextSeq++}`;
+    state.items.push({
+      id,
+      label: t("layout_editor.new_divider_label"),
+      x: 40,
+      y: 40,
+      w: 200,
+      h: 4,
+      tagId: "",
+      type: "divider",
+    });
+    renderStatus();
+    renderItems();
+    selectOnly(id);
   });
 
   metaId.addEventListener("input", () => {
@@ -321,6 +539,7 @@
         w: it.w,
         h: it.h,
         tagId: it.tagId,
+        type: it.type,
       })),
     };
   }
@@ -397,4 +616,5 @@
   renderCanvasSize();
   renderItems();
   renderStatus();
+  renderSelectionPanel();
 })();

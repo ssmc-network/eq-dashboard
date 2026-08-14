@@ -17,6 +17,7 @@
     <input type="text" id="meta-name" value="{{ layout.layout.name }}" placeholder="{{ t('layout_editor.field_name_placeholder') }}">
   </label>
   <button type="button" id="add-item-btn" class="btn">{{ t("layout_editor.add_item") }}</button>
+  <button type="button" id="add-divider-btn" class="btn">{{ t("layout_editor.add_divider") }}</button>
   <button type="button" id="save-btn" class="btn btn--accent">{{ t("layout_editor.save_to_server") }}</button>
   <button type="button" id="download-btn" class="btn">{{ t("layout_editor.download_json") }}</button>
   <div class="toolbar-field zoom-field">
@@ -44,7 +45,7 @@
     <p class="editor-panel__empty" id="editor-panel-empty">{{ t("layout_editor.panel_empty") }}</p>
     <div class="editor-panel__form" id="editor-panel-form" hidden>
       <label>{{ t("layout_editor.field_label") }}<input type="text" id="item-label"></label>
-      <label>{{ t("layout_editor.field_tag_id") }}<input type="text" id="item-tag-id"></label>
+      <label id="item-tag-id-row">{{ t("layout_editor.field_tag_id") }}<input type="text" id="item-tag-id"></label>
       <div class="editor-panel__grid">
         <label>{{ t("layout_editor.field_x") }}<input type="number" id="item-x"></label>
         <label>{{ t("layout_editor.field_y") }}<input type="number" id="item-y"></label>
@@ -52,6 +53,19 @@
         <label>{{ t("layout_editor.field_h") }}<input type="number" id="item-h" min="10"></label>
       </div>
       <button type="button" id="delete-item-btn" class="btn btn--danger">{{ t("layout_editor.delete_item") }}</button>
+    </div>
+    <div class="editor-panel__multi" id="editor-panel-multi" hidden>
+      <p class="editor-panel__multi-count" id="editor-panel-multi-count"></p>
+      <p class="editor-panel__multi-label">{{ t("layout_editor.align_label") }}</p>
+      <div class="editor-panel__align-grid">
+        <button type="button" id="align-left-btn" class="btn btn--sm" title="{{ t('layout_editor.align_left') }}">{{ t("layout_editor.align_left") }}</button>
+        <button type="button" id="align-center-x-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_x') }}">{{ t("layout_editor.align_center_x") }}</button>
+        <button type="button" id="align-right-btn" class="btn btn--sm" title="{{ t('layout_editor.align_right') }}">{{ t("layout_editor.align_right") }}</button>
+        <button type="button" id="align-top-btn" class="btn btn--sm" title="{{ t('layout_editor.align_top') }}">{{ t("layout_editor.align_top") }}</button>
+        <button type="button" id="align-center-y-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_y') }}">{{ t("layout_editor.align_center_y") }}</button>
+        <button type="button" id="align-bottom-btn" class="btn btn--sm" title="{{ t('layout_editor.align_bottom') }}">{{ t("layout_editor.align_bottom") }}</button>
+      </div>
+      <button type="button" id="delete-multi-btn" class="btn btn--danger">{{ t("layout_editor.delete_selected") }}</button>
     </div>
   </aside>
 </div>

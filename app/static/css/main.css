@@ -144,6 +144,16 @@ body {
   margin: 0;
 }
 
+/* `hidden`属性はブラウザ既定のUAスタイルシート(display: none)に依存するが、
+   個別要素にdisplay: flex/grid等をauthor CSSで無条件指定すると、CSSのcascade
+   ではauthor originがUA originより常に優先されるため`hidden`が実質無効化される
+   (「表示/非表示の切り替えをJS側でhidden属性のON/OFFだけに頼っている箇所」で
+   踏みやすい罠)。個別クラスごとに:not([hidden])で防御する代わりに、ここで
+   一括して優先させる。 */
+[hidden] {
+  display: none !important;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -673,6 +683,15 @@ button {
   text-shadow: none;
 }
 
+/* 区切り線は装置ボックスと同じ矩形の仕組みを再利用しているが、稼働状態を
+   持たないため状態色は使わず、キャンバスの枠線色(--diagram-ink)で塗った
+   単色の棒として描画する(壁のような見た目)。ラベル・枠線は表示しない。 */
+.eq-box--divider {
+  background: var(--diagram-ink);
+  border: none;
+  padding: 0;
+}
+
 @keyframes eq-box-pulse {
   0%,
   100% {
@@ -880,6 +899,34 @@ button {
   gap: 0.6rem;
 }
 
+.editor-panel__multi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.editor-panel__multi-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.editor-panel__multi-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: -0.35rem;
+}
+
+.editor-panel__align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.editor-panel__align-grid .btn {
+  justify-content: center;
+}
+
 .eq-editable-box {
   position: absolute;
   display: flex;
@@ -909,6 +956,23 @@ button {
   color: var(--accent-strong);
   text-align: center;
   pointer-events: none;
+}
+
+/* 区切り線は編集中もダッシュボードと近い見た目(単色の棒)にして、
+   完成イメージが編集画面から把握しやすいようにする。ドラッグ/リサイズ/
+   選択の仕組みは装置ボックスと完全に共通(クラスの掛け合わせのみ)。 */
+.eq-editable-box--divider {
+  background: var(--diagram-ink);
+  border: 2px solid transparent;
+  border-radius: 0;
+}
+
+.eq-editable-box--divider.is-selected {
+  border-color: var(--accent);
+}
+
+.eq-editable-box--divider .eq-editable-box__label {
+  display: none;
 }
 
 .eq-editable-box__resize-handle {
