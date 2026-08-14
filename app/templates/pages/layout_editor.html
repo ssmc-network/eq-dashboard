@@ -25,6 +25,15 @@
     <button type="button" id="zoom-reset-btn" class="btn zoom-field__level" title="{{ t('layout_editor.zoom_reset') }}">100%</button>
     <button type="button" id="zoom-in-btn" class="btn" aria-label="{{ t('layout_editor.zoom_in') }}">＋</button>
   </div>
+  <div class="toolbar-field align-toolbar-field">
+    <span>{{ t("layout_editor.align_label") }}</span>
+    <button type="button" id="align-left-btn" class="btn btn--sm" title="{{ t('layout_editor.align_left') }}" disabled>{{ t("layout_editor.align_left") }}</button>
+    <button type="button" id="align-right-btn" class="btn btn--sm" title="{{ t('layout_editor.align_right') }}" disabled>{{ t("layout_editor.align_right") }}</button>
+    <button type="button" id="align-top-btn" class="btn btn--sm" title="{{ t('layout_editor.align_top') }}" disabled>{{ t("layout_editor.align_top") }}</button>
+    <button type="button" id="align-bottom-btn" class="btn btn--sm" title="{{ t('layout_editor.align_bottom') }}" disabled>{{ t("layout_editor.align_bottom") }}</button>
+    <button type="button" id="align-center-x-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_x') }}" disabled>{{ t("layout_editor.align_center_x") }}</button>
+    <button type="button" id="align-center-y-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_y') }}" disabled>{{ t("layout_editor.align_center_y") }}</button>
+  </div>
   <span class="badge" id="editor-status">{{ t("layout_editor.item_count", count=layout.items|length) }}</span>
   <span class="editor-save-message" id="save-message"></span>
 </div>
@@ -56,15 +65,6 @@
     </div>
     <div class="editor-panel__multi" id="editor-panel-multi" hidden>
       <p class="editor-panel__multi-count" id="editor-panel-multi-count"></p>
-      <p class="editor-panel__multi-label">{{ t("layout_editor.align_label") }}</p>
-      <div class="editor-panel__align-grid">
-        <button type="button" id="align-left-btn" class="btn btn--sm" title="{{ t('layout_editor.align_left') }}">{{ t("layout_editor.align_left") }}</button>
-        <button type="button" id="align-center-x-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_x') }}">{{ t("layout_editor.align_center_x") }}</button>
-        <button type="button" id="align-right-btn" class="btn btn--sm" title="{{ t('layout_editor.align_right') }}">{{ t("layout_editor.align_right") }}</button>
-        <button type="button" id="align-top-btn" class="btn btn--sm" title="{{ t('layout_editor.align_top') }}">{{ t("layout_editor.align_top") }}</button>
-        <button type="button" id="align-center-y-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_y') }}">{{ t("layout_editor.align_center_y") }}</button>
-        <button type="button" id="align-bottom-btn" class="btn btn--sm" title="{{ t('layout_editor.align_bottom') }}">{{ t("layout_editor.align_bottom") }}</button>
-      </div>
       <button type="button" id="delete-multi-btn" class="btn btn--danger">{{ t("layout_editor.delete_selected") }}</button>
     </div>
   </aside>
