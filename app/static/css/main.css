@@ -144,6 +144,16 @@ body {
   margin: 0;
 }
 
+/* `hidden`属性はブラウザ既定のUAスタイルシート(display: none)に依存するが、
+   個別要素にdisplay: flex/grid等をauthor CSSで無条件指定すると、CSSのcascade
+   ではauthor originがUA originより常に優先されるため`hidden`が実質無効化される
+   (「表示/非表示の切り替えをJS側でhidden属性のON/OFFだけに頼っている箇所」で
+   踏みやすい罠)。個別クラスごとに:not([hidden])で防御する代わりに、ここで
+   一括して優先させる。 */
+[hidden] {
+  display: none !important;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -878,6 +888,34 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.6rem;
+}
+
+.editor-panel__multi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.editor-panel__multi-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.editor-panel__multi-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: -0.35rem;
+}
+
+.editor-panel__align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.editor-panel__align-grid .btn {
+  justify-content: center;
 }
 
 .eq-editable-box {
