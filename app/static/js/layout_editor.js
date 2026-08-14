@@ -249,6 +249,11 @@
       panelMulti.hidden = false;
       multiCountEl.textContent = t("layout_editor.multi_selected", { count: selectedIds.size });
     }
+    // 位置揃えボタンは常にツールバーに表示し(サイドパネルとは違い選択状況に
+    // 応じて隠れない)、2件以上選択されている場合のみ活性化する。
+    Object.values(alignButtons).forEach((btn) => {
+      btn.disabled = selectedIds.size < 2;
+    });
   }
 
   function selectOnly(id) {

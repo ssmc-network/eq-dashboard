@@ -730,6 +730,15 @@ button {
   background: var(--panel-sunken);
 }
 
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  background: var(--panel);
+}
+
 .btn--accent {
   background: var(--accent);
   border-color: var(--accent-strong);
@@ -814,6 +823,13 @@ button {
   justify-content: center;
   font-family: var(--font-mono);
   cursor: default;
+}
+
+/* 位置揃えボタンは常にツールバーに表示し、2件以上選択中のみ活性化する
+   (選択操作を知らないと存在に気づけない、というディスカバラビリティの
+   問題があったため、複数選択時のみ現れるサイドパネルから移設した)。 */
+.align-toolbar-field {
+  gap: 0.3rem;
 }
 
 /* position: fixedでビューポート基準に固定する(.editor-canvas-area基準の
@@ -911,21 +927,6 @@ button {
   color: var(--text);
 }
 
-.editor-panel__multi-label {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  margin-bottom: -0.35rem;
-}
-
-.editor-panel__align-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
-}
-
-.editor-panel__align-grid .btn {
-  justify-content: center;
-}
 
 .eq-editable-box {
   position: absolute;
