@@ -82,10 +82,6 @@ docker compose -f compose.yaml -f compose.production.yaml up -d --build
 
 ## ブランチ運用
 
-`main`(保護ブランチ) / `release/<バージョン>` / 開発ブランチ(`feature/...`、`claude/...`など)の3層構成です。
-
-1. リリースするバージョンの `release/<バージョン>` ブランチを先に切る
-2. 開発ブランチを `release/<バージョン>` から切って作業し、PRで `release/<バージョン>` にマージする(これを繰り返す)
-3. `release/<バージョン>` が完成したらPRで `main` にマージする
+GitHub Flow(長期ブランチは `main` のみ)を採用しています。開発ブランチ(`feature/...`、`claude/...`など)を `main` から切り、PRで `main` へ直接マージします。バージョンの公開は `main` へのマージとは別に、`vX.Y.Z` 形式のgitタグを切ったタイミングで行います。
 
 詳細な設計・アーキテクチャ上の意思決定については [`CLAUDE.md`](./CLAUDE.md) を参照してください。
