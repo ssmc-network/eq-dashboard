@@ -18,6 +18,12 @@
   // 1件だけ選択されている場合はプロパティパネルの編集フォームを、
   // 2件以上ならバウンディングボックス基準の位置揃えパネルを表示する。
   let selectedIds = new Set();
+  // Ctrl+C/Ctrl+Vのクリップボードはページ内のJS変数のみに保持する
+  // (OSクリップボードAPIは使わない — このエディタ内で完結する用途のみのため)。
+  // idはコピー時点では持たせず、貼り付けのたびに新規発行する。
+  let clipboard = [];
+  let pasteCount = 0;
+  const PASTE_OFFSET = 24;
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
@@ -376,6 +382,51 @@
 
   canvas.addEventListener("pointerdown", (e) => {
     if (e.target === canvas) selectOnly(null);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const active = document.activeElement;
+    // フォーカスがテキスト入力中の場合はブラウザ標準のコピペを優先し、
+    // ショートカットを奪わない(ラベル編集中にCtrl+Cした場合など)。
+    if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) {
+      return;
+    }
+    const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c";
+    const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v";
+
+    if (isCopy) {
+      if (selectedIds.size === 0) return;
+      e.preventDefault();
+      // tagIdはコピーしない — 貼り付け後にそのまま保存すると同一tagIdの重複と
+      // なりサーバー側バリデーションで弾かれるため、他の装置と同様「未割り当て」
+      // の状態で複製し、後から手動で割り当てる運用に合わせる。
+      clipboard = selectedItems().map((it) => ({ label: it.label, x: it.x, y: it.y, w: it.w, h: it.h }));
+      pasteCount = 0;
+    } else if (isPaste) {
+      if (clipboard.length === 0) return;
+      e.preventDefault();
+      pasteCount += 1;
+      const offset = PASTE_OFFSET * pasteCount;
+      const newIds = [];
+      clipboard.forEach((snapshot) => {
+        const id = `item-${nextSeq++}`;
+        state.items.push({
+          id,
+          label: snapshot.label,
+          x: Math.max(0, snapshot.x + offset),
+          y: Math.max(0, snapshot.y + offset),
+          w: snapshot.w,
+          h: snapshot.h,
+          tagId: "",
+        });
+        newIds.push(id);
+      });
+      renderStatus();
+      renderItems();
+      selectedIds = new Set(newIds);
+      renderSelectionPanel();
+      highlightSelection();
+    }
   });
 
   function bindField(el, key, isNumber) {
