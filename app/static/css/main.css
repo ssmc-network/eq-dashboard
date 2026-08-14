@@ -683,6 +683,15 @@ button {
   text-shadow: none;
 }
 
+/* 区切り線は装置ボックスと同じ矩形の仕組みを再利用しているが、稼働状態を
+   持たないため状態色は使わず、キャンバスの枠線色(--diagram-ink)で塗った
+   単色の棒として描画する(壁のような見た目)。ラベル・枠線は表示しない。 */
+.eq-box--divider {
+  background: var(--diagram-ink);
+  border: none;
+  padding: 0;
+}
+
 @keyframes eq-box-pulse {
   0%,
   100% {
@@ -947,6 +956,23 @@ button {
   color: var(--accent-strong);
   text-align: center;
   pointer-events: none;
+}
+
+/* 区切り線は編集中もダッシュボードと近い見た目(単色の棒)にして、
+   完成イメージが編集画面から把握しやすいようにする。ドラッグ/リサイズ/
+   選択の仕組みは装置ボックスと完全に共通(クラスの掛け合わせのみ)。 */
+.eq-editable-box--divider {
+  background: var(--diagram-ink);
+  border: 2px solid transparent;
+  border-radius: 0;
+}
+
+.eq-editable-box--divider.is-selected {
+  border-color: var(--accent);
+}
+
+.eq-editable-box--divider .eq-editable-box__label {
+  display: none;
 }
 
 .eq-editable-box__resize-handle {

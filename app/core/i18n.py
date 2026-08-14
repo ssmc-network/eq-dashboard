@@ -68,6 +68,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     "layout_editor.zoom_in": {"ja": "拡大", "en": "Zoom in"},
     "layout_editor.zoom_reset": {"ja": "100%", "en": "100%"},
     "layout_editor.add_item": {"ja": "+ 装置を追加", "en": "+ Add Equipment"},
+    "layout_editor.add_divider": {"ja": "+ 区切り線を追加", "en": "+ Add Divider"},
     "layout_editor.save_to_server": {"ja": "サーバーへ保存", "en": "Save to Server"},
     "layout_editor.download_json": {"ja": "JSONをダウンロード", "en": "Download JSON"},
     "layout_editor.item_count": {"ja": "{count}件の装置", "en": "{count} equipment"},

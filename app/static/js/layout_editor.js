@@ -34,6 +34,7 @@
   const metaWidth = document.getElementById("meta-width");
   const metaHeight = document.getElementById("meta-height");
   const addBtn = document.getElementById("add-item-btn");
+  const addDividerBtn = document.getElementById("add-divider-btn");
   const saveBtn = document.getElementById("save-btn");
   const downloadBtn = document.getElementById("download-btn");
   const statusEl = document.getElementById("editor-status");
@@ -54,6 +55,7 @@
   const multiCountEl = document.getElementById("editor-panel-multi-count");
   const fieldLabel = document.getElementById("item-label");
   const fieldTagId = document.getElementById("item-tag-id");
+  const fieldTagIdRow = document.getElementById("item-tag-id-row");
   const fieldX = document.getElementById("item-x");
   const fieldY = document.getElementById("item-y");
   const fieldW = document.getElementById("item-w");
@@ -168,7 +170,10 @@
     canvas.innerHTML = "";
     state.items.forEach((item) => {
       const box = document.createElement("div");
-      box.className = "eq-editable-box" + (selectedIds.has(item.id) ? " is-selected" : "");
+      box.className =
+        "eq-editable-box" +
+        (item.type === "divider" ? " eq-editable-box--divider" : "") +
+        (selectedIds.has(item.id) ? " is-selected" : "");
       box.dataset.itemId = item.id;
       box.style.left = `${item.x}px`;
       box.style.top = `${item.y}px`;
@@ -230,6 +235,8 @@
       panelEmpty.hidden = true;
       panelForm.hidden = false;
       panelMulti.hidden = true;
+      // 区切り線はタグ・稼働状態と無関係なので、tagId欄はそもそも見せない。
+      fieldTagIdRow.hidden = item.type === "divider";
       fieldLabel.value = item.label;
       fieldTagId.value = item.tagId;
       fieldX.value = item.x;
@@ -317,10 +324,13 @@
     const startY = e.clientY;
     const originW = item.w;
     const originH = item.h;
+    // 区切り線は「細い矩形」として使うため、装置(最小20px)より小さい
+    // 最小サイズを許可する(横に伸ばせば横線、縦に伸ばせば縦線になる)。
+    const minSize = item.type === "divider" ? 2 : 20;
 
     function onMove(ev) {
-      item.w = Math.max(20, Math.round(originW + (ev.clientX - startX) / zoom));
-      item.h = Math.max(20, Math.round(originH + (ev.clientY - startY) / zoom));
+      item.w = Math.max(minSize, Math.round(originW + (ev.clientX - startX) / zoom));
+      item.h = Math.max(minSize, Math.round(originH + (ev.clientY - startY) / zoom));
       box.style.width = `${item.w}px`;
       box.style.height = `${item.h}px`;
       if (selectedIds.has(item.id)) {
@@ -400,7 +410,7 @@
       // tagIdはコピーしない — 貼り付け後にそのまま保存すると同一tagIdの重複と
       // なりサーバー側バリデーションで弾かれるため、他の装置と同様「未割り当て」
       // の状態で複製し、後から手動で割り当てる運用に合わせる。
-      clipboard = selectedItems().map((it) => ({ label: it.label, x: it.x, y: it.y, w: it.w, h: it.h }));
+      clipboard = selectedItems().map((it) => ({ label: it.label, x: it.x, y: it.y, w: it.w, h: it.h, type: it.type }));
       pasteCount = 0;
     } else if (isPaste) {
       if (clipboard.length === 0) return;
@@ -418,6 +428,7 @@
           w: snapshot.w,
           h: snapshot.h,
           tagId: "",
+          type: snapshot.type,
         });
         newIds.push(id);
       });
@@ -462,7 +473,33 @@
 
   addBtn.addEventListener("click", () => {
     const id = `item-${nextSeq++}`;
-    state.items.push({ id, label: t("layout_editor.new_item_label"), x: 40, y: 40, w: 120, h: 80, tagId: "" });
+    state.items.push({
+      id,
+      label: t("layout_editor.new_item_label"),
+      x: 40,
+      y: 40,
+      w: 120,
+      h: 80,
+      tagId: "",
+      type: "equipment",
+    });
+    renderStatus();
+    renderItems();
+    selectOnly(id);
+  });
+
+  addDividerBtn.addEventListener("click", () => {
+    const id = `item-${nextSeq++}`;
+    state.items.push({
+      id,
+      label: t("layout_editor.new_divider_label"),
+      x: 40,
+      y: 40,
+      w: 200,
+      h: 4,
+      tagId: "",
+      type: "divider",
+    });
     renderStatus();
     renderItems();
     selectOnly(id);
@@ -502,6 +539,7 @@
         w: it.w,
         h: it.h,
         tagId: it.tagId,
+        type: it.type,
       })),
     };
   }
