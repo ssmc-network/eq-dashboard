@@ -49,6 +49,8 @@ composeファイルは意図的にCompose Specificationの命名(`compose.yaml` 
 
 **Claude CodeはPRのマージを実施しないこと。** PR(開発ブランチ→`main`)の作成はしてよいが、実際のマージ操作はユーザー側が行う。CIの確認・レビュー・不具合修正はこれまで通り主体的に行ってよいが、マージ自体は必ずユーザーの実施に委ねること。バージョンを公開するためのgitタグ作成も、原則としてユーザー側の判断で行う(Claude Codeが自発的に・依頼されていないのにタグを切ることはない)。
 
+**Claude Codeが作成するPRのタイトル・本文は日本語で書くこと**(2026年8月確認)。Renovateが自動生成するPR(タイトル・本文とも英語)はRenovate自身の挙動であり、これに合わせてClaude Code側のPRまで英語にする必要はない — 両者は別のルールで運用してよい。コミットメッセージについては特に指定が無い限り既存の慣習(英語)を踏襲する。
+
 **例外: `release.yml`(後述)の`workflow_dispatch`起動は、ユーザーが明示的に依頼した場合に限り、Claude Code(Claude Code on the Web上のセッションを含む)が`mcp__github__actions_run_trigger`等のツールで代行してよい**(2026年8月、モバイル環境からタグ・Releaseを作成する手段としてユーザーの要望により解禁)。あくまで「頼まれたら代行する」であって「勝手に判断してタグを切ってよい」わけではない点は変わらない — 依頼が無い限りClaude Code側からこのワークフローを起動することはない。代行する際は、ユーザーから`dry_run: false`での本実行を明確に指示されない限り、まず`dry_run: true`で実行しJob Summaryの内容(version/target/target_sha/タグ重複有無)を提示して確認を取ってから、`dry_run: false`で本実行するという2段階を踏むこと(本実行はタグpush直後に`build.yaml`が連鎖してDocker Hubへの`latest`上書きまで進む、後戻りしにくい操作のため)。
 
 **CI(`.github/workflows/`)**:
