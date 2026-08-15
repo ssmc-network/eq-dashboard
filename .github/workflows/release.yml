@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   release:
@@ -107,3 +108,15 @@ jobs:
           gh release create "${{ inputs.version }}" \
             --title "${{ inputs.version }}" \
             --generate-notes
+
+      # GITHUB_TOKENで行ったgit push(上のannotated tag作成)は、GitHubの
+      # 無限連鎖防止の仕様により他ワークフローのpushトリガーを起動しない
+      # (build.yamlの `on: push: tags:` が反応しない)。workflow_dispatch/
+      # repository_dispatchはこの制限の例外として明示的に許可されているため、
+      # build.yamlをここから直接dispatchして代わりのトリガーとする。
+      - name: Trigger build.yaml for the new tag
+        if: ${{ inputs.dry_run == false }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build.yaml --ref "${{ inputs.version }}"
