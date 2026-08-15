@@ -25,6 +25,50 @@
   let pasteCount = 0;
   const PASTE_OFFSET = 24;
 
+  // Ctrl+Z/Ctrl+Shift+Z(またはCtrl+Y)のUndo/Redoは、コピペと同様ページ内の
+  // JS変数のみで完結させる。差分ベースのコマンドパターンではなく、items配列
+  // 全体のスナップショットを操作の直前にpushする単純な方式にしている
+  // (ドラッグ/リサイズ/位置揃え/追加/削除/貼り付け/プロパティ編集など操作の
+  // 種類が多く、それぞれに逆操作を実装するより素直で壊れにくいため)。
+  // layout自体のid/name(メタ情報)はUndo対象に含めない — コピー機能が
+  // アイテムのみを対象にしているのと同様、スコープをアイテム操作に揃えている。
+  let undoStack = [];
+  let redoStack = [];
+  const MAX_HISTORY = 50;
+
+  function snapshotItems() {
+    return state.items.map((it) => ({ ...it }));
+  }
+
+  // 操作を実際に適用する直前に呼ぶ(適用後ではない) — スタックには
+  // 「その操作が起きる前の状態」を積む。
+  function pushHistory() {
+    undoStack.push(snapshotItems());
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack = [];
+  }
+
+  // Undo後、元選択されていたidが削除/貼り付け等で意味を持たない場合が
+  // あるため、選択状態は素直にクリアする(どの操作を取り消したかによらず
+  // 一貫した挙動にするため)。
+  function undo() {
+    if (undoStack.length === 0) return;
+    redoStack.push(snapshotItems());
+    state.items = undoStack.pop();
+    renderStatus();
+    renderItems();
+    selectOnly(null);
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(snapshotItems());
+    state.items = redoStack.pop();
+    renderStatus();
+    renderItems();
+    selectOnly(null);
+  }
+
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
   let zoom = 1;
@@ -275,6 +319,9 @@
   function startDrag(e, item, box) {
     e.preventDefault();
     e.stopPropagation();
+    // ドラッグ中の各pointermoveごとではなく、ジェスチャー開始時に1回だけ
+    // pushする(1回のドラッグ操作 = 1回のUndo、という粒度に揃えるため)。
+    pushHistory();
     // 複数選択中にその一員をドラッグした場合は選択されている全装置を対象に、
     // そうでなければドラッグ対象の1件だけを対象にする。
     const ids = selectedIds.has(item.id) && selectedIds.size > 1 ? new Set(selectedIds) : new Set([item.id]);
@@ -323,6 +370,8 @@
   function startResize(e, item, box) {
     e.preventDefault();
     e.stopPropagation();
+    // リサイズ操作1回 = Undo1回、という粒度に揃えるため開始時に1回だけpushする。
+    pushHistory();
     // リサイズは常に単一の装置が対象なので、複数選択中でもこの1件に絞る。
     selectOnly(item.id);
     const startX = e.clientX;
@@ -356,6 +405,7 @@
   function alignSelected(mode) {
     const items = selectedItems();
     if (items.length < 2) return;
+    pushHistory();
     const minX = Math.min(...items.map((it) => it.x));
     const maxRight = Math.max(...items.map((it) => it.x + it.w));
     const minY = Math.min(...items.map((it) => it.y));
@@ -408,8 +458,21 @@
     }
     const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c";
     const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v";
+    // Redoは環境によってCtrl+Shift+Z(Mac系の慣習)とCtrl+Y(Windows系の慣習)の
+    // どちらも使われるため両方を受け付ける。
+    const isUndo = (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z";
+    const isRedo =
+      (e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === "z") || e.key.toLowerCase() === "y");
 
-    if (isCopy) {
+    if (isUndo) {
+      e.preventDefault();
+      undo();
+      return;
+    } else if (isRedo) {
+      e.preventDefault();
+      redo();
+      return;
+    } else if (isCopy) {
       if (selectedIds.size === 0) return;
       e.preventDefault();
       // tagIdはコピーしない — 貼り付け後にそのまま保存すると同一tagIdの重複と
@@ -420,6 +483,7 @@
     } else if (isPaste) {
       if (clipboard.length === 0) return;
       e.preventDefault();
+      pushHistory();
       pasteCount += 1;
       const offset = PASTE_OFFSET * pasteCount;
       const newIds = [];
@@ -446,9 +510,20 @@
   });
 
   function bindField(el, key, isNumber) {
+    // 1キー入力ごとにpushすると「1文字ずつUndoする」形になり使いづらいため、
+    // フォーカスしてから最初のinputでのみpushする(フォーカスを外すまでの
+    // 一連の編集をまとめて1回のUndoにする)。
+    let sessionStarted = false;
+    el.addEventListener("focus", () => {
+      sessionStarted = false;
+    });
     el.addEventListener("input", () => {
       const item = primaryItem();
       if (!item) return;
+      if (!sessionStarted) {
+        pushHistory();
+        sessionStarted = true;
+      }
       item[key] = isNumber ? Math.round(Number(el.value) || 0) : el.value;
       renderItems();
     });
@@ -463,6 +538,7 @@
   deleteBtn.addEventListener("click", () => {
     const item = primaryItem();
     if (!item) return;
+    pushHistory();
     state.items = state.items.filter((it) => it.id !== item.id);
     renderStatus();
     renderItems();
@@ -470,6 +546,7 @@
   });
 
   deleteMultiBtn.addEventListener("click", () => {
+    pushHistory();
     state.items = state.items.filter((it) => !selectedIds.has(it.id));
     renderStatus();
     renderItems();
@@ -477,6 +554,7 @@
   });
 
   addBtn.addEventListener("click", () => {
+    pushHistory();
     const id = `item-${nextSeq++}`;
     state.items.push({
       id,
@@ -494,6 +572,7 @@
   });
 
   addDividerBtn.addEventListener("click", () => {
+    pushHistory();
     const id = `item-${nextSeq++}`;
     state.items.push({
       id,
