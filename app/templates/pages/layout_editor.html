@@ -34,7 +34,12 @@
     <button type="button" id="align-center-x-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_x') }}" disabled>{{ t("layout_editor.align_center_x") }}</button>
     <button type="button" id="align-center-y-btn" class="btn btn--sm" title="{{ t('layout_editor.align_center_y') }}" disabled>{{ t("layout_editor.align_center_y") }}</button>
   </div>
-  <span class="badge" id="editor-status">{{ t("layout_editor.item_count", count=layout.items|length) }}</span>
+  <div class="toolbar-field align-toolbar-field">
+    <span>{{ t("layout_editor.distribute_label") }}</span>
+    <button type="button" id="distribute-horizontal-btn" class="btn btn--sm" title="{{ t('layout_editor.distribute_horizontal') }}" disabled>{{ t("layout_editor.distribute_horizontal") }}</button>
+    <button type="button" id="distribute-vertical-btn" class="btn btn--sm" title="{{ t('layout_editor.distribute_vertical') }}" disabled>{{ t("layout_editor.distribute_vertical") }}</button>
+  </div>
+  <span class="badge" id="editor-status">{{ t("layout_editor.item_count", count=(layout.items|selectattr("type", "ne", "divider")|list|length)) }}</span>
   <span class="editor-save-message" id="save-message"></span>
 </div>
 
@@ -58,8 +63,8 @@
       <div class="editor-panel__grid">
         <label>{{ t("layout_editor.field_x") }}<input type="number" id="item-x"></label>
         <label>{{ t("layout_editor.field_y") }}<input type="number" id="item-y"></label>
-        <label>{{ t("layout_editor.field_w") }}<input type="number" id="item-w" min="10"></label>
-        <label>{{ t("layout_editor.field_h") }}<input type="number" id="item-h" min="10"></label>
+        <label>{{ t("layout_editor.field_w") }}<input type="number" id="item-w"></label>
+        <label>{{ t("layout_editor.field_h") }}<input type="number" id="item-h"></label>
       </div>
       <button type="button" id="delete-item-btn" class="btn btn--danger">{{ t("layout_editor.delete_item") }}</button>
     </div>

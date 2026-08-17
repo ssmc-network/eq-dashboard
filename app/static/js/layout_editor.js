@@ -36,6 +36,13 @@
   let redoStack = [];
   const MAX_HISTORY = 50;
 
+  // サーバー未保存の変更があるかどうか。beforeunloadで画面離脱前の警告を
+  // 出すために使う(保存成功時のみfalseに戻す)。
+  let isDirty = false;
+  function markDirty() {
+    isDirty = true;
+  }
+
   function snapshotItems() {
     return state.items.map((it) => ({ ...it }));
   }
@@ -43,6 +50,7 @@
   // 操作を実際に適用する直前に呼ぶ(適用後ではない) — スタックには
   // 「その操作が起きる前の状態」を積む。
   function pushHistory() {
+    markDirty();
     undoStack.push(snapshotItems());
     if (undoStack.length > MAX_HISTORY) undoStack.shift();
     redoStack = [];
@@ -53,6 +61,7 @@
   // 一貫した挙動にするため)。
   function undo() {
     if (undoStack.length === 0) return;
+    markDirty();
     redoStack.push(snapshotItems());
     state.items = undoStack.pop();
     renderStatus();
@@ -62,12 +71,23 @@
 
   function redo() {
     if (redoStack.length === 0) return;
+    markDirty();
     undoStack.push(snapshotItems());
     state.items = redoStack.pop();
     renderStatus();
     renderItems();
     selectOnly(null);
   }
+
+  // このページは(HTMXのhx-boostを使わない)通常のマルチページ遷移なので、
+  // サイドバーのリンククリック・タブを閉じる・リロードのいずれもbeforeunloadで
+  // 一律に捕捉できる。ブラウザ標準の確認ダイアログはメッセージ文言を
+  // カスタマイズできない仕様のため、returnValueの中身自体に意味はない。
+  window.addEventListener("beforeunload", (e) => {
+    if (!isDirty) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
@@ -114,6 +134,18 @@
     "center-y": document.getElementById("align-center-y-btn"),
     bottom: document.getElementById("align-bottom-btn"),
   };
+  const distributeButtons = {
+    x: document.getElementById("distribute-horizontal-btn"),
+    y: document.getElementById("distribute-vertical-btn"),
+  };
+
+  // 区切り線は「細い矩形」として使うため、装置(最小20px)より小さい最小
+  // サイズを許可する。ドラッグリサイズとプロパティパネルのW/H入力の両方で
+  // 使う共通の基準値(以前はドラッグリサイズ側にしか反映されておらず、
+  // パネルの入力欄には装置向けのmin="10"がHTML側に直書きされたまま残っていた)。
+  function minSizeFor(item) {
+    return item.type === "divider" ? 2 : 20;
+  }
 
   function findItem(id) {
     return state.items.find((it) => it.id === id) || null;
@@ -207,7 +239,9 @@
   zoomResetBtn.addEventListener("click", () => setZoom(1));
 
   function renderStatus() {
-    statusEl.textContent = t("layout_editor.item_count", { count: state.items.length });
+    // 区切り線は装置ではないのでこの件数には含めない。
+    const count = state.items.filter((it) => it.type !== "divider").length;
+    statusEl.textContent = t("layout_editor.item_count", { count });
   }
 
   function renderItems() {
@@ -285,6 +319,8 @@
       fieldTagId.value = item.tagId;
       fieldX.value = item.x;
       fieldY.value = item.y;
+      fieldW.min = minSizeFor(item);
+      fieldH.min = minSizeFor(item);
       fieldW.value = item.w;
       fieldH.value = item.h;
     } else {
@@ -297,6 +333,11 @@
     // 応じて隠れない)、2件以上選択されている場合のみ活性化する。
     Object.values(alignButtons).forEach((btn) => {
       btn.disabled = selectedIds.size < 2;
+    });
+    // 均等配置は「両端を固定し、間を等間隔にする」操作のため、間に最低1件は
+    // 挟まっている必要がある(3件以上)。2件だと位置揃えと区別がつかない。
+    Object.values(distributeButtons).forEach((btn) => {
+      btn.disabled = selectedIds.size < 3;
     });
   }
 
@@ -378,9 +419,8 @@
     const startY = e.clientY;
     const originW = item.w;
     const originH = item.h;
-    // 区切り線は「細い矩形」として使うため、装置(最小20px)より小さい
-    // 最小サイズを許可する(横に伸ばせば横線、縦に伸ばせば縦線になる)。
-    const minSize = item.type === "divider" ? 2 : 20;
+    // 横に伸ばせば横線、縦に伸ばせば縦線になる。
+    const minSize = minSizeFor(item);
 
     function onMove(ev) {
       item.w = Math.max(minSize, Math.round(originW + (ev.clientX - startX) / zoom));
@@ -443,6 +483,36 @@
 
   Object.keys(alignButtons).forEach((mode) => {
     alignButtons[mode].addEventListener("click", () => alignSelected(mode));
+  });
+
+  // 両端(先頭・末尾、位置でソート)は固定したまま、間の装置を等間隔になる
+  // ように再配置する。等間隔の基準は中心間の距離ではなく、隣接する矩形の
+  // 隙間(edge-to-edge)を揃える方式にしている(サイズが不揃いの装置群でも
+  // 見た目が破綻しにくいため)。
+  function distributeSelected(axis) {
+    const items = selectedItems();
+    if (items.length < 3) return;
+    pushHistory();
+    const sizeKey = axis === "x" ? "w" : "h";
+    const sorted = [...items].sort((a, b) => a[axis] - b[axis]);
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const span = last[axis] + last[sizeKey] - first[axis];
+    const totalSize = sorted.reduce((sum, it) => sum + it[sizeKey], 0);
+    const gap = (span - totalSize) / (sorted.length - 1);
+
+    let cursor = first[axis] + first[sizeKey] + gap;
+    for (let i = 1; i < sorted.length - 1; i++) {
+      const it = sorted[i];
+      it[axis] = Math.max(0, Math.round(cursor));
+      cursor = it[axis] + it[sizeKey] + gap;
+    }
+    renderItems();
+    highlightSelection();
+  }
+
+  Object.keys(distributeButtons).forEach((axis) => {
+    distributeButtons[axis].addEventListener("click", () => distributeSelected(axis));
   });
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -509,7 +579,10 @@
     }
   });
 
-  function bindField(el, key, isNumber) {
+  // minFnを渡した数値フィールド(w/h)は、直接入力された値もドラッグリサイズと
+  // 同じ最小サイズ(minSizeFor)でクランプする — HTMLのmin属性はスピナーの
+  // 挙動には効くが、キー入力そのものを止めるわけではないため、両方揃える。
+  function bindField(el, key, isNumber, minFn) {
     // 1キー入力ごとにpushすると「1文字ずつUndoする」形になり使いづらいため、
     // フォーカスしてから最初のinputでのみpushする(フォーカスを外すまでの
     // 一連の編集をまとめて1回のUndoにする)。
@@ -524,7 +597,12 @@
         pushHistory();
         sessionStarted = true;
       }
-      item[key] = isNumber ? Math.round(Number(el.value) || 0) : el.value;
+      if (isNumber) {
+        const raw = Math.round(Number(el.value) || 0);
+        item[key] = minFn ? Math.max(minFn(item), raw) : raw;
+      } else {
+        item[key] = el.value;
+      }
       renderItems();
     });
   }
@@ -532,8 +610,8 @@
   bindField(fieldTagId, "tagId", false);
   bindField(fieldX, "x", true);
   bindField(fieldY, "y", true);
-  bindField(fieldW, "w", true);
-  bindField(fieldH, "h", true);
+  bindField(fieldW, "w", true, minSizeFor);
+  bindField(fieldH, "h", true, minSizeFor);
 
   deleteBtn.addEventListener("click", () => {
     const item = primaryItem();
@@ -590,9 +668,11 @@
   });
 
   metaId.addEventListener("input", () => {
+    markDirty();
     state.id = metaId.value;
   });
   metaName.addEventListener("input", () => {
+    markDirty();
     state.name = metaName.value;
   });
   // 幅・高さはキャンバスサイズ固定方針のためUIから外しているが、内部の
@@ -600,12 +680,14 @@
   // テンプレートに復活させればUIからの変更をそのまま復元できる)。
   if (metaWidth) {
     metaWidth.addEventListener("input", () => {
+      markDirty();
       state.width = Number(metaWidth.value) || 100;
       renderCanvasSize();
     });
   }
   if (metaHeight) {
     metaHeight.addEventListener("input", () => {
+      markDirty();
       state.height = Number(metaHeight.value) || 100;
       renderCanvasSize();
     });
@@ -684,6 +766,7 @@
         saveMessage.textContent = t("layout_editor.save_ok", { id: data.id });
         saveMessage.classList.add("editor-save-message--ok");
         originalId = data.id;
+        isDirty = false;
       } else {
         saveMessage.textContent = t("layout_editor.save_failed", { errors: (data.errors || []).join(" / ") });
         saveMessage.classList.add("editor-save-message--error");
